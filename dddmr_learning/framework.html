@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>DDDMR Navigation — 全链路通信架构</title>
+<style>
+/* ===================================================================
+   CSS VARIABLES & RESET
+   =================================================================== */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#6366f1;--secondary:#ec4899;--accent:#06b6d4;--success:#10b981;--warning:#f59e0b;
+  --bg-deep:#0a0f1e;--text-p:#f1f5f9;--text-s:#94a3b8;
+  --border:rgba(255,255,255,0.07);--glass:rgba(255,255,255,0.035);
+  --glass-hv:rgba(255,255,255,0.07);--glass-bd:rgba(255,255,255,0.10);
+}
+html,body{
+  font-family:'Inter','Segoe UI','Microsoft YaHei',system-ui,sans-serif;
+  background:var(--bg-deep);color:var(--text-p);min-height:100vh;min-height:100dvh;
+  overflow-x:hidden;
+}
+
+/* ===================================================================
+   BACKGROUND EFFECTS
+   =================================================================== */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg .o{position:absolute;border-radius:50%;filter:blur(120px);opacity:0.10;animation:fl 22s ease-in-out infinite}
+.bg .o:nth-child(1){width:min(600px,80vw);height:min(600px,80vw);background:var(--primary);top:-200px;left:-100px}
+.bg .o:nth-child(2){width:min(500px,60vw);height:min(500px,60vw);background:var(--secondary);bottom:-200px;right:-100px;animation-delay:-8s}
+.bg .o:nth-child(3){width:min(400px,50vw);height:min(400px,50vw);background:var(--accent);top:45%;left:45%;animation-delay:-15s}
+@keyframes fl{0%,100%{transform:translate(0,0)scale(1)}25%{transform:translate(60px,-40px)scale(1.05)}50%{transform:translate(-30px,50px)scale(.95)}75%{transform:translate(-50px,-30px)scale(1.02)}}
+.grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;background-image:linear-gradient(rgba(255,255,255,.1)1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.1)1px,transparent 1px);background-size:50px 50px}
+
+/* ===================================================================
+   APP CONTAINER
+   =================================================================== */
+.app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ===================================================================
+   HEADER (desktop baseline)
+   =================================================================== */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 18px;background:rgba(17,24,39,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-bd);z-index:20;flex-shrink:0;flex-wrap:wrap;gap:6px}
+.hdr-l{display:flex;align-items:center;gap:10px;min-width:0;flex-shrink:1}
+.hdr-i{width:34px;height:34px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 14px rgba(99,102,241,.5);flex-shrink:0}
+.hdr-t{min-width:0}
+.hdr-t h1{font-size:16px;font-weight:700;background:linear-gradient(135deg,#f1f5f9,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-t span{font-size:11px;color:var(--text-s);display:none}
+.hdr-r{display:flex;align-items:center;gap:5px;flex-shrink:0;flex-wrap:wrap}
+
+/* buttons */
+.btn{padding:7px 13px;border:1px solid var(--glass-bd);background:var(--glass);backdrop-filter:blur(10px);border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-p);transition:all .25s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;user-select:none;-webkit-tap-highlight-color:transparent}
+.btn:hover{background:var(--glass-hv);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.btn:active{transform:scale(.96)}
+.btn.ac{background:linear-gradient(135deg,var(--primary),#4f46e5);border-color:transparent;box-shadow:0 2px 10px rgba(99,102,241,.35)}
+.btn.ac:hover{box-shadow:0 4px 18px rgba(99,102,241,.55)}
+.btn.ac.pl{background:linear-gradient(135deg,var(--warning),#ea580c)}
+.st-badge{font-size:10px;font-weight:600;padding:5px 10px;background:var(--glass);border:1px solid var(--glass-bd);border-radius:14px;color:var(--text-s);white-space:nowrap}
+.st-badge span{color:var(--primary);font-weight:700}
+
+/* hamburger (mobile only) */
+.btn.menu-toggle{display:none;font-size:18px;padding:5px 10px}
+
+/* ===================================================================
+   MAIN LAYOUT
+   =================================================================== */
+.main{flex:1;display:flex;overflow:hidden;min-height:0;position:relative}
+.dia{flex:1;position:relative;overflow:hidden;min-width:0}
+#svg{width:100%;height:100%;cursor:grab;touch-action:none}
+#svg:active,#svg.pan{cursor:grabbing}
+
+/* ===================================================================
+   SVG STYLES
+   =================================================================== */
+.edge{fill:none;stroke:rgba(148,163,184,0.20);stroke-width:1.5;transition:all .35s}
+.edge.on{stroke:var(--primary);stroke-width:2.5;filter:drop-shadow(0 0 5px rgba(99,102,241,.5))}
+.elb{fill:rgba(10,15,30,0.92);stroke:rgba(255,255,255,0.10);stroke-width:1}
+.elt{font-size:8.5px;font-family:'JetBrains Mono','Courier New',monospace;fill:#94a3b8;pointer-events:none;font-weight:500}
+.elt.on{fill:#c7d2fe;font-weight:700}
+.layer-bg{fill:rgba(255,255,255,0.015);stroke:rgba(255,255,255,0.04);stroke-width:1;rx:10;pointer-events:none}
+.layer-title{font-size:9px;font-weight:700;fill:rgba(255,255,255,0.20);letter-spacing:1px;pointer-events:none}
+.ng{cursor:pointer}
+.ng .nb{transition:all .3s;filter:drop-shadow(0 3px 8px rgba(0,0,0,.35))}
+.ng:hover .nb{filter:drop-shadow(0 5px 16px rgba(99,102,241,.45))}
+.ng.on .nb{filter:drop-shadow(0 0 18px rgba(99,102,241,.7));stroke-width:3}
+.ng.hl .nb{filter:drop-shadow(0 0 22px rgba(236,72,153,.8));stroke-width:3}
+.nt{font-size:10px;font-weight:700;pointer-events:none;fill:#1e293b}
+.ns{font-size:8px;font-weight:500;pointer-events:none;fill:#475569}
+
+/* ===================================================================
+   SIDE PANEL (desktop)
+   =================================================================== */
+.pnl{width:390px;min-width:240px;max-width:540px;background:rgba(17,24,39,.94);backdrop-filter:blur(20px);border-left:1px solid var(--glass-bd);display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.5);z-index:15;position:relative;flex-shrink:0;transition:width .3s}
+.pnl.closed{width:0!important;min-width:0!important;overflow:hidden;border-left:none}
+.pnl-rsz{position:absolute;left:0;top:0;width:5px;height:100%;cursor:col-resize;z-index:16;transition:background .3s}
+.pnl-rsz:hover,.pnl-rsz.dr{background:linear-gradient(180deg,var(--primary),var(--secondary))}
+.pnl-top{padding:12px 16px;border-bottom:1px solid var(--glass-bd);display:flex;justify-content:space-between;align-items:center}
+.pnl-top h2{font-size:14px;font-weight:700}
+.pnl-tgl{width:28px;height:28px;border:1px solid var(--glass-bd);border-radius:6px;background:var(--glass);cursor:pointer;color:var(--text-s);display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .3s;-webkit-tap-highlight-color:transparent}
+.pnl-tgl:hover{background:var(--glass-hv);color:#fff}
+.pnl-scr{flex:1;overflow-y:auto;padding:12px 16px;scrollbar-width:thin;scrollbar-color:var(--primary) transparent;-webkit-overflow-scrolling:touch}
+.pnl-scr::-webkit-scrollbar{width:4px}
+.pnl-scr::-webkit-scrollbar-track{background:transparent}
+.pnl-scr::-webkit-scrollbar-thumb{background:var(--primary);border-radius:2px}
+
+/* ===================================================================
+   CARD / INFO STYLES
+   =================================================================== */
+.ic{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(236,72,153,.04));border:1px solid var(--glass-bd);border-radius:12px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden;animation:si .4s ease}
+.ic::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--primary),var(--secondary))}
+@keyframes si{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.ic h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.ic .dc{font-size:13px;color:var(--text-s);line-height:1.7;margin-bottom:8px}
+.br{display:flex;flex-wrap:wrap;gap:4px}
+.bd{display:inline-flex;align-items:center;gap:3px;padding:4px 9px;border-radius:5px;font-family:'JetBrains Mono','Courier New',monospace;font-size:11px;font-weight:600}
+.bd.tp{background:rgba(99,102,241,.18);color:#a5b4fc;border:1px solid rgba(99,102,241,.3)}
+.bd.ac{background:rgba(16,185,129,.18);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}
+.bd.ty{background:rgba(245,158,11,.18);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.bd.pb{background:rgba(6,182,212,.18);color:#67e8f9;border:1px solid rgba(6,182,212,.3)}
+.ndp{background:var(--glass);border:1px solid var(--glass-bd);border-radius:10px;padding:10px;margin-bottom:8px;animation:si .4s ease}
+.ndp h4{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:5px}
+.ndp ul{list-style:none;padding:0}
+.ndp li{font-size:12px;color:var(--text-s);padding:2px 0 2px 12px;position:relative;word-break:break-all}
+.ndp li::before{content:'›';position:absolute;left:0;color:var(--accent);font-weight:700}
+
+.coll{margin-bottom:6px}
+.coll-hd{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--glass);border:1px solid var(--glass-bd);border-radius:7px;cursor:pointer;transition:all .3s;font-size:13px;font-weight:600;-webkit-tap-highlight-color:transparent}
+.coll-hd:hover{background:var(--glass-hv)}
+.coll-ar{transition:transform .3s;font-size:8px;color:var(--text-s)}
+.coll.op .coll-ar{transform:rotate(180deg)}
+.coll-bd{max-height:0;overflow:hidden;transition:max-height .35s}
+.coll.op .coll-bd{max-height:3000px;margin-top:5px}
+
+.si{padding:8px 10px;margin:2px 0;background:var(--glass);border:1px solid var(--glass-bd);border-radius:6px;cursor:pointer;transition:all .25s;font-size:12px;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;min-height:44px}
+.si:hover{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3)}
+.si.cu{background:rgba(99,102,241,.15);border-color:var(--primary)}
+.sn{width:22px;height:22px;border-radius:50%;background:var(--glass);border:1px solid var(--glass-bd);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.si.cu .sn{background:var(--primary);border-color:var(--primary);color:#fff}
+
+.pbw{padding:10px 16px;border-top:1px solid var(--glass-bd)}
+.ptr{width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.pfl{height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:2px;transition:width .5s;position:relative}
+.pfl::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:sh 2s infinite}
+@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.plbl{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text-s)}
+
+.ss{padding:7px 16px;border-top:1px solid var(--glass-bd);display:flex;align-items:center;gap:7px;font-size:10px}
+.sd{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:sp 2s infinite}
+@keyframes sp{0%,100%{opacity:1}50%{opacity:.4}}
+
+.ls{padding:8px 16px;border-top:1px solid var(--glass-bd)}
+.ls h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-s);margin-bottom:6px}
+.li{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.lit{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-s);padding:6px 7px;background:var(--glass);border-radius:4px;border:1px solid var(--glass-bd);cursor:pointer;transition:all .25s;-webkit-tap-highlight-color:transparent;min-height:32px}
+.lit:hover{background:var(--glass-hv);transform:translateX(2px)}
+.lsw{width:10px;height:10px;border-radius:2px;border:2px solid;flex-shrink:0}
+
+.tt{position:fixed;background:rgba(10,15,30,.97);backdrop-filter:blur(8px);border:1px solid var(--glass-bd);border-radius:6px;padding:6px 9px;font-size:10px;color:var(--text-p);pointer-events:none;opacity:0;transition:opacity .2s;z-index:1000;box-shadow:0 5px 20px rgba(0,0,0,.5);max-width:280px}
+.tt.on{opacity:1}
+
+/* floating panel toggle button (mobile only) */
+.pnl-fab{display:none;position:fixed;bottom:20px;right:20px;z-index:50;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));border:none;color:#fff;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,.5);transition:all .3s;-webkit-tap-highlight-color:transparent}
+.pnl-fab:hover{transform:scale(1.05);box-shadow:0 6px 28px rgba(99,102,241,.7)}
+.pnl-fab:active{transform:scale(.92)}
+
+/* mobile overlay backdrop */
+.pnl-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:25}
+
+/* ===================================================================
+   RESPONSIVE: TABLET (<1024px)
+   =================================================================== */
+@media(max-width:1024px){
+  .hdr{padding:6px 12px;gap:4px}
+  .hdr-t h1{font-size:14px}
+  .hdr-t span{display:none}
+  .btn{padding:6px 10px;font-size:11px}
+  .hdr-r{gap:3px}
+  .st-badge{font-size:9px;padding:4px 8px}
+  .pnl{width:300px!important;min-width:200px!important}
+  .pnl-top h2{font-size:13px}
+  .ic h3{font-size:14px}
+  .ic .dc{font-size:12px}
+  .nt{font-size:9.5px}
+  .ns{font-size:7.5px}
+  .elt{font-size:8px}
+}
+
+/* ===================================================================
+   RESPONSIVE: PHONE (<768px)
+   =================================================================== */
+@media(max-width:768px){
+  .hdr{padding:6px 10px;gap:3px}
+  .hdr-l{gap:6px}
+  .hdr-i{width:28px;height:28px;font-size:15px;border-radius:7px}
+  .hdr-t h1{font-size:12px}
+  .hdr-r{width:100%;justify-content:center;gap:3px}
+  .hdr-r .btn{padding:5px 8px;font-size:10px;border-radius:5px}
+  .st-badge{font-size:8px;padding:3px 7px}
+  #speedSlider{display:none}
+  #speedLabel{display:none}
+
+  /* main area — full screen diagram */
+  .main{flex-direction:column}
+  .dia{flex:1;min-height:50vh}
+
+  /* side panel becomes bottom sheet on mobile */
+  .pnl{position:fixed;top:auto;bottom:0;left:0;right:0;width:100%!important;min-width:unset!important;max-width:unset!important;max-height:85vh;max-height:85dvh;border-radius:16px 16px 0 0;border-left:none;border-top:1px solid var(--glass-bd);z-index:30;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);box-shadow:0 -10px 40px rgba(0,0,0,.6);
+  /* 手机上禁用毛玻璃，用纯色背景避免文字模糊 */
+  background:rgba(15,23,42,.98);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .pnl.mobile-open{transform:translateY(0)}
+  .pnl.closed{transform:translateY(100%)!important}
+  .pnl-rsz{display:none}
+  /* drag handle on mobile panel */
+  .pnl-drag-handle{display:none;width:36px;height:4px;background:rgba(255,255,255,.3);border-radius:2px;margin:8px auto 0}
+  .pnl-top{padding:8px 14px}
+  .pnl-scr{padding:8px 12px}
+  .pnl-tgl{display:none}
+  .pbw{padding:8px 14px}
+  .ss{padding:6px 14px}
+  .ls{padding:6px 14px}
+
+  /* FAB toggle */
+  .pnl-fab{display:flex;align-items:center;justify-content:center}
+  .pnl-overlay.on{display:block}
+
+  /* SVG adjustments */
+  .nt{font-size:9px}
+  .ns{font-size:7px}
+  .elt{font-size:7.5px}
+  .layer-title{font-size:8px;letter-spacing:.5px}
+  .elt.on{fill:#c7d2fe}
+
+  /* step list items */
+  .si{padding:6px 8px;min-height:40px}
+  .sn{width:20px;height:20px;font-size:9px}
+  .si{font-size:11px}
+
+  /* legend grid — single column on small phones */
+  .li{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+
+  /* tooltip max width */
+  .tt{max-width:220px;font-size:9px}
+}
+
+/* ===================================================================
+   RESPONSIVE: SMALL PHONE (<400px)
+   =================================================================== */
+@media(max-width:400px){
+  .hdr{padding:4px 6px}
+  .hdr-l{gap:4px}
+  .hdr-i{width:24px;height:24px;font-size:13px;border-radius:6px}
+  .hdr-t h1{font-size:11px}
+  .hdr-r{padding:2px 0}
+  .btn{padding:4px 6px;font-size:9px;gap:2px;border-radius:4px}
+  .st-badge{font-size:7px;padding:2px 5px}
+  .nt{font-size:8px}
+  .ns{font-size:6.5px}
+  .elt{font-size:7px}
+  .layer-title{font-size:7px}
+  .ic h3{font-size:13px}
+  .ic .dc{font-size:11px}
+  .pnl{max-height:90vh;max-height:90dvh}
+  .pnl-fab{width:42px;height:42px;bottom:16px;right:16px;font-size:17px}
+}
+</style>
+</head>
+<body>
+<div class="bg"><div class="o"></div><div class="o"></div><div class="o"></div></div>
+<div class="grid"></div>
+
+<div class="app">
+<!-- ===================================================================
+     HEADER
+     =================================================================== -->
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="hdr-i">🦾</div>
+    <div class="hdr-t"><h1>DDDMR Navigation · 全链路通信架构</h1><span>RViz2 → Navigation → Quadruped → ros2_control → Gazebo → Sensors → Localization → 闭环</span></div>
+  </div>
+  <div class="hdr-r">
+    <span style="font-size:9px;color:var(--text-s)">⏱</span>
+    <input type="range" id="speedSlider" min="0.5" max="4" step="0.5" value="1.5" oninput="updateSpeed()" style="width:44px;accent-color:var(--primary)">
+    <span id="speedLabel" style="font-size:9px;color:var(--text-s);min-width:26px">1.5x</span>
+    <span class="st-badge">步骤 <span id="curStep">—</span>/<span id="totSteps">23</span></span>
+    <button class="btn" onclick="resetAll()" title="重置">↺</button>
+    <button class="btn" onclick="prv()" title="上一步">◀</button>
+    <button class="btn ac" id="btnPlay" onclick="togglePlay()" title="播放/暂停">▶ 播放</button>
+    <button class="btn" onclick="nxt()" title="下一步">▶</button>
+    <button class="btn" id="btnAuto" onclick="toggleAuto()" title="自动循环">🔁</button>
+  </div>
+</div>
+
+<!-- ===================================================================
+     MAIN CONTENT
+     =================================================================== -->
+<div class="main">
+  <div class="dia" id="diagramArea"><svg id="svg"></svg></div>
+
+  <!-- Side Panel (desktop) -->
+  <div class="pnl" id="sidePanel">
+    <div class="pnl-rsz" id="resizeHandle"></div>
+    <div class="pnl-drag-handle" id="dragHandle"></div>
+    <div class="pnl-top"><h2>📋 通信详情</h2><button class="pnl-tgl" onclick="togglePanel()">◀</button></div>
+    <div class="pnl-scr" id="panelScroll">
+      <div class="ic" id="stepInfoCard"><h3>🚀 准备就绪</h3><p class="dc">点击<b>播放</b>演示从<b>用户点击RViz2</b> → <b>导航规划</b> → <b>四足步态控制</b> → <b>Gazebo物理仿真</b> → <b>传感器反馈闭环</b>的完整23步全链路通信流程。<br>点击图中<u>节点</u>查看模块详情，点击<u>图例</u>高亮同组模块。</p></div>
+      <div id="nodeInfoArea"></div>
+      <div class="coll op" id="flowCollapsible">
+        <div class="coll-hd" onclick="toggleCollapsible('flowCollapsible')"><span>🔄 完整通信流程 (23步)</span><span class="coll-ar">▼</span></div>
+        <div class="coll-bd"><div id="flowList"></div></div>
+      </div>
+    </div>
+    <div class="pbw"><div class="ptr"><div class="pfl" id="progressFill" style="width:0%"></div></div><div class="plbl"><span id="progressPct">0%</span><span id="progressPhase">等待开始</span></div></div>
+    <div class="ss"><div class="sd" id="statusDot"></div><span id="statusMsg">系统就绪 · 全链路: RViz2 → Gazebo → 闭环</span></div>
+    <div class="ls"><h4>🎨 模块图例 (点击高亮同组)</h4>
+      <div class="li">
+        <div class="lit" onclick="highlightGroup('user')"><div class="lsw" style="background:#e0e7ff;border-color:#4f46e5"></div>用户交互</div>
+        <div class="lit" onclick="highlightGroup('nav')"><div class="lsw" style="background:#fef3c7;border-color:#d97706"></div>导航核心</div>
+        <div class="lit" onclick="highlightGroup('plan')"><div class="lsw" style="background:#dbeafe;border-color:#2563eb"></div>规划层</div>
+        <div class="lit" onclick="highlightGroup('perception')"><div class="lsw" style="background:#d1fae5;border-color:#059669"></div>感知层</div>
+        <div class="lit" onclick="highlightGroup('localization')"><div class="lsw" style="background:#fce7f3;border-color:#db2777"></div>定位层</div>
+        <div class="lit" onclick="highlightGroup('map')"><div class="lsw" style="background:#ede9fe;border-color:#7c3aed"></div>地图服务</div>
+        <div class="lit" onclick="highlightGroup('quadruped')"><div class="lsw" style="background:#fef9c3;border-color:#ca8a04"></div>四足控制</div>
+        <div class="lit" onclick="highlightGroup('ros2ctrl')"><div class="lsw" style="background:#e0f2fe;border-color:#0284c7"></div>ROS2 Control</div>
+        <div class="lit" onclick="highlightGroup('gazebo')"><div class="lsw" style="background:#ffe4e6;border-color:#e11d48"></div>Gazebo仿真</div>
+        <div class="lit" onclick="highlightGroup('sensor')"><div class="lsw" style="background:#f3e8ff;border-color:#9333ea"></div>传感器</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- mobile overlay + fab -->
+<div class="pnl-overlay" id="panelOverlay" onclick="closeMobilePanel()"></div>
+<button class="pnl-fab" id="panelFab" onclick="toggleMobilePanel()" title="查看详情">📋</button>
+
+<div class="tt" id="tooltip"></div>
+
+<script>
+// ===================================================================
+// NODES — 26 nodes
+// ===================================================================
+const N = [
+  { id:'rviz', lb:'RViz2', sb:'可视化/目标设定', grp:'user', cl:'#e0e7ff', sk:'#4f46e5', x:0.025, y:0.06,
+    dt:{ pkg:'rviz2', type:'可视化工具', top:'pub: clicked_point, goal_pose_3d', desc:'用户点击地图设定导航目标点，发布clicked_point (PointStamped)' }},
+  { id:'clicked2p2p', lb:'clicked2p2p', sb:'目标转发节点', grp:'user', cl:'#e0e7ff', sk:'#4f46e5', x:0.025, y:0.20,
+    dt:{ pkg:'p2p_move_base/clicked2goal.py', type:'Python脚本', top:'sub: clicked_point; action client: /p2p_move_base', desc:'订阅点击/目标位姿，转为PoseStamped后通过Action /p2p_move_base发送导航目标' }},
+  { id:'recovery', lb:'recovery_behaviors', sb:'恢复行为服务', grp:'nav', cl:'#fef3c7', sk:'#d97706', x:0.025, y:0.50,
+    dt:{ pkg:'recovery_behaviors', type:'Action Server', top:'action: /recovery_behaviors', desc:'恢复行为Action。rotate_inplace原地旋转/position_control，超时或振荡时p2p_move_base触发' }},
+
+  { id:'p2p', lb:'p2p_move_base', sb:'行为树导航控制器', grp:'nav', cl:'#fef3c7', sk:'#d97706', x:0.17, y:0.12,
+    dt:{ pkg:'p2p_move_base', type:'Action Server (/p2p_move_base)', top:'pub: cmd_vel; sub: mcl_pose, global_path', desc:'核心导航。状态机: planning→controlling→waiting→recovery。协调全局/局部规划，发布cmd_vel驱动机器人' }},
+  { id:'gpm', lb:'global_plan_mgr', sb:'全局规划查询管理', grp:'nav', cl:'#fef3c7', sk:'#d97706', x:0.17, y:0.28,
+    dt:{ pkg:'p2p_move_base/P2PGlobalPlanManager', type:'内部组件 @5Hz', top:'action client: get_dwa_plan', desc:'管理全局路径查询频率。在d_controlling中持续查询新路径以应对动态环境' }},
+
+  { id:'gpl', lb:'global_planner', sb:'Graph A* 全局规划', grp:'plan', cl:'#dbeafe', sk:'#2563eb', x:0.34, y:0.04,
+    dt:{ pkg:'global_planner', type:'Action Server (get_dwa_plan)', top:'sub: map1/mapcloud, map/dGraph', desc:'A* on Graph + dynamic_window_aware滑动窗口重规划。基于点云构建可通行图' }},
+  { id:'lpl', lb:'local_planner', sb:'MPC局部轨迹规划', grp:'plan', cl:'#dbeafe', sk:'#2563eb', x:0.34, y:0.28,
+    dt:{ pkg:'local_planner', type:'插件式MPC规划器', top:'sub: odom; pub: accepted_trajectory, prune_plan', desc:'DWA-like差分驱动模型。调用trajectory_generators→mpc_critics→最优轨迹速度' }},
+  { id:'traj', lb:'trajectory_generators', sb:'轨迹候选生成', grp:'plan', cl:'#dbeafe', sk:'#2563eb', x:0.48, y:0.20,
+    dt:{ pkg:'trajectory_generators', type:'插件', top:'pub: trajectory, rotate_inplace_trajectory', desc:'速度空间采样:differential_drive_simple(DWA)/rotate_inplace/rotate_shortest_angle' }},
+  { id:'mpc', lb:'mpc_critics', sb:'MPC多维度评分', grp:'plan', cl:'#dbeafe', sk:'#2563eb', x:0.62, y:0.20,
+    dt:{ pkg:'mpc_critics', type:'插件', top:'collision/pure_pursuit/stick_path/toward_global/shortest_angle', desc:'加权求和选最优: collision(碰撞)/pure_pursuit(追踪)/stick_path(贴合)/toward_global_plan/shortest_angle' }},
+
+  { id:'p3g', lb:'perception_3d_global', sb:'全局3D感知·dGraph', grp:'perception', cl:'#d1fae5', sk:'#059669', x:0.48, y:0.04,
+    dt:{ pkg:'perception_3d', type:'3D感知(全局)', top:'sub: map1/mapcloud, segmented_cloud_pure; pub: map/dGraph', desc:'融合静态地图+LiDAR点云→dGraph动态可通行图。edge_detection检测可通行边界' }},
+  { id:'p3l', lb:'perception_3d_local', sb:'局部3D感知·避障', grp:'perception', cl:'#d1fae5', sk:'#059669', x:0.48, y:0.28,
+    dt:{ pkg:'perception_3d', type:'3D感知(局部)', top:'sub: segmented_cloud_pure, map1/mapcloud; pub: lethal costmap', desc:'局部3m感知窗口。path_blocked_strategy检测阻塞，inflation_radius=1.5m膨胀层碰撞检测' }},
+
+  { id:'pgmap', lb:'pg_map_server', sb:'Pose Graph地图', grp:'map', cl:'#ede9fe', sk:'#7c3aed', x:0.72, y:0.04,
+    dt:{ pkg:'dddmr_pg_map_server', type:'地图服务器(manager+map1)', top:'pub: map1/mapcloud, map1/mapground, map1/mapsurface', desc:'管理pose graph全局地图发布。voxel_size=0.3~0.4m' }},
+  { id:'subm', lb:'sub_maps', sb:'子图动态管理', grp:'map', cl:'#ede9fe', sk:'#7c3aed', x:0.72, y:0.18,
+    dt:{ pkg:'sub_maps', type:'子图管理', top:'pub: sub_mapcloud, sub_mapground; warmup预加载', desc:'基于位置动态切换。search_radius=50m, warmup_trigger=20m，提前加载邻近子图' }},
+  { id:'loam', lb:'lego_loam', sb:'SLAM建图·位姿图优化', grp:'localization', cl:'#fce7f3', sk:'#db2777', x:0.62, y:0.10,
+    dt:{ pkg:'lego_loam_bor', type:'SLAM (imageProjection+featureAssociation+mapOptimization)', top:'sub: velodyne_points; pub: key_poses, aft_mapped_to_init, laser_cloud_surround, pose_graph', desc:'完整LeGO-LOAM建图管线。点云投影→特征提取→帧间ICP匹配→位姿图优化→回环检测。输出key_poses位姿图和全局一致点云地图，保存后供pg_map_server导航使用' }},
+
+  { id:'mip', lb:'mcl_ip', sb:'点云→Range图像', grp:'localization', cl:'#fce7f3', sk:'#db2777', x:0.48, y:0.54,
+    dt:{ pkg:'lego_loam_bor', type:'ImageProjection', top:'sub: velodyne_points; pub: ground_cloud, projected_image', desc:'将3D点云投影为Range图像提取地面。可选YOLO TRT，segment_theta=60°' }},
+  { id:'mfa', lb:'mcl_fa', sb:'特征提取edge/surf', grp:'localization', cl:'#fce7f3', sk:'#db2777', x:0.62, y:0.54,
+    dt:{ pkg:'lego_loam_bor', type:'FeatureAssociation', top:'pub: laser_cloud_sharp/less_sharp/flat/less_flat', desc:'基于局部曲率提取sharp(边缘)和flat(平面)特征。edge_threshold=0.1' }},
+  { id:'m3d', lb:'mcl_3dl', sb:'3D蒙特卡洛定位', grp:'localization', cl:'#fce7f3', sk:'#db2777', x:0.78, y:0.54,
+    dt:{ pkg:'mcl_3dl', type:'粒子滤波(60粒子)', top:'sub: laser_cloud_*, odom; pub: mcl_pose, particles, TF', desc:'60粒子3D定位。融合LiDAR特征+里程计+先验地图似然估计。jump_dist=1m防绑架' }},
+
+  { id:'qctrl', lb:'quadruped_controller', sb:'四足步态控制', grp:'quadruped', cl:'#fef9c3', sk:'#ca8a04', x:0.34, y:0.64,
+    dt:{ pkg:'quadruped_controller_node', type:'步态控制器', top:'sub: cmd_vel, foot_contacts, body_pose; pub: joint_trajectory', desc:'接收cmd_vel生成12DOF关节轨迹。融合足端接触反馈和机身位姿估计调整步态' }},
+  { id:'sest', lb:'state_estimation', sb:'机身状态估计', grp:'quadruped', cl:'#fef9c3', sk:'#ca8a04', x:0.48, y:0.64,
+    dt:{ pkg:'state_estimation_node', type:'状态估计器', top:'pub: body_pose; sub: joint_states, imu', desc:'融合IMU+关节编码器估计机身位姿body_pose，提供base→odom变换参考' }},
+  { id:'cmgr', lb:'controller_manager', sb:'控制器管理调度', grp:'ros2ctrl', cl:'#e0f2fe', sk:'#0284c7', x:0.62, y:0.64,
+    dt:{ pkg:'controller_manager (ros2_control)', type:'控制器管理器', top:'服务: load/configure/switch', desc:'ros2_control核心。管理effort_controller和joint_states_controller生命周期' }},
+  { id:'jec', lb:'joint_effort_ctrl', sb:'关节力矩控制器', grp:'ros2ctrl', cl:'#e0f2fe', sk:'#0284c7', x:0.78, y:0.64,
+    dt:{ pkg:'joint_group_effort_controller', type:'力矩跟随', top:'sub: joint_trajectory; pub: command_interface(effort)', desc:'接收joint_trajectory轨迹点插值→effort力矩指令到Gazebo硬件接口' }},
+  { id:'jsc', lb:'joint_states_ctrl', sb:'关节状态发布器', grp:'ros2ctrl', cl:'#e0f2fe', sk:'#0284c7', x:0.78, y:0.78,
+    dt:{ pkg:'joint_states_controller', type:'状态反馈', top:'pub: joint_states, dynamic_joint_states', desc:'读取Gazebo state_interface→发布/joint_states供state_estimation和TF使用' }},
+
+  { id:'velo', lb:'Velodyne LiDAR', sb:'3D激光雷达', grp:'sensor', cl:'#f3e8ff', sk:'#9333ea', x:0.93, y:0.12,
+    dt:{ pkg:'gazebo_ros_laser_controller', type:'传感器(Gazebo plugin)', top:'pub: velodyne_points', desc:'发布360°×FOV 3D点云。remap为/airy_points供定位和感知管线消费' }},
+  { id:'contacts', lb:'contacts_sensor', sb:'足端接触传感器', grp:'sensor', cl:'#f3e8ff', sk:'#9333ea', x:0.93, y:0.36,
+    dt:{ pkg:'contacts_sensor (Gazebo plugin)', type:'传感器', top:'pub: foot_contacts, foot', desc:'检测足端与地面接触状态→quadruped_controller步态相位调整' }},
+  { id:'gzctrl', lb:'gz_ros2_control', sb:'ROS2↔Gazebo桥接', grp:'gazebo', cl:'#ffe4e6', sk:'#e11d48', x:0.93, y:0.50,
+    dt:{ pkg:'gazebo_ros2_control', type:'仿真桥接插件', top:'桥接: command_interface ↔ Gazebo Joint API', desc:'将effort指令写入Gazebo关节接口，读取joint_states状态反馈' }},
+  { id:'gazebo', lb:'Gazebo', sb:'物理仿真引擎', grp:'gazebo', cl:'#ffe4e6', sk:'#e11d48', x:0.93, y:0.64,
+    dt:{ pkg:'gazebo (Ignition/Classic)', type:'物理引擎', top:'模拟: 碰撞/重力/摩擦/传感器', desc:'四足机器人12关节多体动力学仿真→传感器原始数据' }},
+  { id:'odom_raw', lb:'odom_raw', sb:'里程计(滤波)', grp:'sensor', cl:'#f3e8ff', sk:'#9333ea', x:0.93, y:0.78,
+    dt:{ pkg:'gz_to_odom_tf_filtered', type:'传感器滤波', top:'pub: odom, odom/raw; TF: odom→base_link', desc:'Gazebo ground truth经滤波→odom里程计。供local_planner和mcl_3dl使用' }},
+];
+
+// ===================================================================
+// EDGES
+// ===================================================================
+const E = [
+  {f:'rviz',t:'clicked2p2p',l:'clicked_point',fl:'clicked_point (PointStamped)',s:'d',c:'goal'},
+  {f:'clicked2p2p',t:'p2p',l:'/p2p_move_base',fl:'/p2p_move_base [Action: PToPMoveBase]',s:'-',c:'goal'},
+  {f:'p2p',t:'gpm',l:'queryPlan @5Hz',fl:'内部: queryThread() @5Hz',s:'d',c:'internal'},
+  {f:'gpm',t:'gpl',l:'get_dwa_plan',fl:'get_dwa_plan [Action: GetPlan]',s:'-',c:'plan'},
+  {f:'pgmap',t:'gpl',l:'map1/mapcloud',fl:'map1/mapcloud (PointCloud2)',s:'-',c:'map'},
+  {f:'subm',t:'gpl',l:'sub_mapcloud',fl:'sub_mapcloud — 子图点云',s:'-',c:'map'},
+  {f:'p3g',t:'gpl',l:'map/dGraph',fl:'map/dGraph — 动态可通行图',s:'-',c:'perception'},
+  {f:'gpl',t:'p2p',l:'global_path',fl:'global_path (nav_msgs/Path) [ActionResult]',s:'-',c:'plan'},
+  {f:'p2p',t:'lpl',l:'compVelCmd()',fl:'computeVelocityCommand() — 请求最优轨迹',s:'-',c:'plan'},
+  {f:'lpl',t:'traj',l:'genCand',fl:'内部: 采样速度空间→轨迹候选集',s:'d',c:'internal'},
+  {f:'traj',t:'mpc',l:'scoreAll',fl:'内部: 多维度critic评分',s:'d',c:'internal'},
+  {f:'mpc',t:'lpl',l:'bestTraj',fl:'内部: 加权求和→最优轨迹(xv,yv,thetav)',s:'d',c:'internal'},
+  {f:'p2p',t:'recovery',l:'recovery',fl:'/recovery_behaviors [Action]',s:'d',c:'recovery'},
+  {f:'pgmap',t:'p3g',l:'mapcloud',fl:'map1/mapcloud + map1/mapground',s:'-',c:'map'},
+  {f:'pgmap',t:'p3l',l:'mapcloud',fl:'map1/mapcloud + map1/mapground',s:'-',c:'map'},
+  {f:'velo',t:'p3g',l:'seg_cloud',fl:'segmented_cloud_pure — 语义分割后点云',s:'d',c:'sensor'},
+  {f:'velo',t:'p3l',l:'seg_cloud',fl:'segmented_cloud_pure — 语义分割后点云',s:'d',c:'sensor'},
+  {f:'p3l',t:'lpl',l:'lethal',fl:'perception_3d_local/lidar/lethal — 局部代价地图',s:'-',c:'perception'},
+  {f:'p2p',t:'qctrl',l:'cmd_vel',fl:'cmd_vel (geometry_msgs/Twist)',s:'-',c:'control'},
+  {f:'qctrl',t:'jec',l:'joint_traj',fl:'joint_group_effort_controller/joint_trajectory',s:'-',c:'control'},
+  {f:'cmgr',t:'jec',l:'lifecycle',fl:'内部: 控制器load/configure/switch',s:'d',c:'internal'},
+  {f:'jec',t:'gzctrl',l:'cmd_iface',fl:'command_interface (effort[Nm]×12)',s:'-',c:'control'},
+  {f:'gzctrl',t:'gazebo',l:'SetForce',fl:'Gazebo Joint API: SetForce()',s:'-',c:'gazebo'},
+  {f:'gazebo',t:'velo',l:'ray_points',fl:'GPU Ray Sensor → velodyne_points',s:'-',c:'gazebo'},
+  {f:'gazebo',t:'odom_raw',l:'gt_pose',fl:'Gazebo Pose → odom/raw (经gz_to_odom_tf_filtered)',s:'-',c:'gazebo'},
+  {f:'gazebo',t:'jsc',l:'joint_states',fl:'joint_states (JointState × 12)',s:'-',c:'gazebo'},
+  {f:'gazebo',t:'contacts',l:'contacts',fl:'foot_contacts — 足端接触力/状态',s:'-',c:'gazebo'},
+  {f:'jsc',t:'cmgr',l:'state_iface',fl:'state_interface — 闭环反馈',s:'-',c:'ros2ctrl'},
+  {f:'velo',t:'loam',l:'point_cloud',fl:'velodyne_points → LeGO-LOAM: 点云投影+特征提取+帧间匹配+位姿图优化+回环',s:'-',c:'sensor'},
+  {f:'loam',t:'pgmap',l:'pose_graph',fl:'key_poses + laser_cloud_surround — 保存Pose Graph到磁盘 → pg_map_server加载发布',s:'d',c:'map'},
+  {f:'velo',t:'mip',l:'/airy_points',fl:'/airy_points — LiDAR点云remap',s:'-',c:'sensor'},
+  {f:'mip',t:'mfa',l:'proj_out',fl:'projection_out [Channel] — Range图像+地面',s:'-',c:'loc'},
+  {f:'mfa',t:'m3d',l:'laser_cloud_*',fl:'laser_cloud_sharp/less_sharp/flat/less_flat (4 topics)',s:'-',c:'loc'},
+  {f:'odom_raw',t:'lpl',l:'odom',fl:'odom (Odometry) — 滤波后里程计→局部规划',s:'-',c:'sensor'},
+  {f:'odom_raw',t:'m3d',l:'odom',fl:'odom (Odometry) — 运动模型预测输入',s:'-',c:'sensor'},
+  {f:'subm',t:'m3d',l:'sub_map',fl:'sub_mapcloud — 先验地图似然场匹配',s:'-',c:'map'},
+  {f:'m3d',t:'p2p',l:'mcl_pose',fl:'mcl_pose (PoseWithCovarianceStamped) + TF map→odom',s:'-',c:'loc'},
+  {f:'jsc',t:'sest',l:'joint_states',fl:'关节状态→状态估计融合',s:'d',c:'quadruped'},
+  {f:'sest',t:'qctrl',l:'body_pose',fl:'body_pose — 机身位姿估计',s:'d',c:'quadruped'},
+  {f:'contacts',t:'qctrl',l:'foot_contacts',fl:'foot_contacts — 足端接触→步态调整',s:'d',c:'sensor'},
+];
+
+// ===================================================================
+// STEPS — 23
+// ===================================================================
+const S = [
+  {t:'1. 用户点击目标',d:'用户在RViz2中点击地图目标点，发布clicked_point',n:['rviz','clicked2p2p'],e:[0]},
+  {t:'2. 目标转发至导航栈',d:'clicked2p2p订阅clicked_point→转PoseStamped→Action /p2p_move_base发送',n:['clicked2p2p','p2p'],e:[1]},
+  {t:'3. 全局规划管理器查询',d:'p2p_move_base→global_plan_mgr @5Hz周期查询全局路径',n:['p2p','gpm'],e:[2]},
+  {t:'4. 请求全局路径规划',d:'global_plan_mgr通过Action get_dwa_plan向global_planner发送请求',n:['gpm','gpl'],e:[3]},
+  {t:'5. 加载静态地图数据',d:'pg_map_server发布map1/mapcloud; sub_maps发布子图点云→global_planner构建可通行Graph',n:['pgmap','subm','gpl'],e:[4,5]},
+  {t:'6. 全局感知融合',d:'perception_3d_global融合静态地图+LiDAR分割点云→发布map/dGraph动态可通行图',n:['pgmap','velo','p3g','gpl'],e:[13,15,6]},
+  {t:'7. 全局路径返回',d:'global_planner执行A* on Graph+DWA滑动窗口→ActionResult返回global_path',n:['gpl','p2p'],e:[7]},
+  {t:'8. 局部轨迹规划启动',d:'p2p_move_base→local_planner.computeVelocityCommand() 请求最优速度指令',n:['p2p','lpl'],e:[8]},
+  {t:'9. 轨迹生成与MPC评分',d:'trajectory_generators速度采样→mpc_critics多维度评分(collision/pure_pursuit/...)→最优轨迹',n:['lpl','traj','mpc'],e:[9,10,11]},
+  {t:'10. 局部代价地图',d:'perception_3d_local发布lethal代价地图(膨胀1.5m+路径阻塞检测)→local_planner碰撞检测',n:['p3l','lpl'],e:[17]},
+  {t:'11. cmd_vel下发',d:'p2p_move_base发布cmd_vel (geometry_msgs/Twist) → quadruped_controller',n:['p2p','qctrl'],e:[18]},
+  {t:'12. 四足步态生成',d:'quadruped_controller融合cmd_vel+body_pose+foot_contacts→生成12自由度关节轨迹',n:['qctrl','sest','contacts'],e:[38,39]},
+  {t:'13. 关节轨迹下发',d:'quadruped_controller→joint_group_effort_controller/joint_trajectory',n:['qctrl','jec'],e:[19]},
+  {t:'14. 力矩控制计算',d:'controller_manager管理生命周期→joint_effort_ctrl插值轨迹→effort力矩指令',n:['cmgr','jec'],e:[20]},
+  {t:'15. ROS2→Gazebo桥接',d:'joint_effort_ctrl的command_interface将12关节力矩写入gz_ros2_control插件',n:['jec','gzctrl'],e:[21]},
+  {t:'16. Gazebo物理仿真',d:'gz_ros2_control调用Gazebo Joint API→物理引擎多体动力学仿真',n:['gzctrl','gazebo'],e:[22]},
+  {t:'17. 传感器数据生成',d:'Gazebo仿真输出: LiDAR点云+odom真值+关节状态+足端接触→各传感器话题',n:['gazebo','velo','odom_raw','jsc','contacts'],e:[23,24,25,26]},
+  {t:'18. LeGO-LOAM SLAM建图',d:'LiDAR点云→lego_loam(imageProjection+featureAssociation+mapOptimization)→帧间ICP匹配→位姿图优化→回环检测→保存pose_graph供pg_map_server',n:['velo','loam','pgmap'],e:[28,29]},
+  {t:'19. 关节状态闭环',d:'joint_states_ctrl读取Gazebo state_interface→发布/joint_states→反馈controller_manager',n:['jsc','cmgr'],e:[27]},
+  {t:'20. 定位管线: LiDAR输入',d:'Velodyne→/airy_points→mcl_ip投影为Range图像提取地面',n:['velo','mip'],e:[30]},
+  {t:'21. 定位管线: 特征提取',d:'mcl_ip→mcl_fa提取sharp/flat特征→发布4类laser_cloud→mcl_3dl',n:['mip','mfa','m3d'],e:[31,32]},
+  {t:'22. 定位管线: 融合定位',d:'mcl_3dl融合LiDAR特征+odom+sub_map→60粒子滤波→mcl_pose+TF',n:['m3d','odom_raw','subm'],e:[32,34,35]},
+  {t:'23. 闭环完成',d:'mcl_pose反馈p2p_move_base→local_planner判断goal_tolerance(0.3m/0.3rad)→Action succeed! 全链路闭环',n:['m3d','p2p'],e:[36]},
+];
+
+// ===================================================================
+// STATE
+// ===================================================================
+let cs=-1,playing=false,pt=null,auto=false,spd=1.5;
+let nodes=[],svgW,svgH,highG=null;
+let px=0,py=0,sc=1,panning=false,psX,psY,ppsX,ppsY;
+let isMobile=window.innerWidth<768;
+
+// ===================================================================
+// MOBILE PANEL MANAGEMENT
+// ===================================================================
+function toggleMobilePanel(){
+  const pnl=document.getElementById('sidePanel');
+  const overlay=document.getElementById('panelOverlay');
+  const fab=document.getElementById('panelFab');
+  if(pnl.classList.contains('mobile-open')){
+    closeMobilePanel();
+  }else{
+    pnl.classList.add('mobile-open');
+    if(isMobile){overlay.classList.add('on');fab.style.opacity='0';}
+  }
+}
+function closeMobilePanel(){
+  const pnl=document.getElementById('sidePanel');
+  const overlay=document.getElementById('panelOverlay');
+  const fab=document.getElementById('panelFab');
+  pnl.classList.remove('mobile-open');
+  overlay.classList.remove('on');
+  fab.style.opacity='1';
+}
+function togglePanel(){
+  if(isMobile){
+    toggleMobilePanel();return;
+  }
+  const pnl=document.getElementById('sidePanel');
+  pnl.classList.toggle('closed');
+  setTimeout(init,400);
+}
+
+// ===================================================================
+// INIT
+// ===================================================================
+function init(){
+  isMobile=window.innerWidth<768;
+  const svg=document.getElementById('svg'),area=document.getElementById('diagramArea');
+  const r=area.getBoundingClientRect();svgW=r.width;svgH=r.height;
+  if(svgW<=0||svgH<=0){requestAnimationFrame(init);return}
+  svg.setAttribute('viewBox',`0 0 ${svgW} ${svgH}`);svg.innerHTML='';
+  const nodeW=isMobile&&svgW<600?90:122,nodeH=isMobile&&svgW<600?38:44;
+  nodes=N.map(n=>({...n,px:n.x*svgW,py:n.y*svgH,w:nodeW,h:nodeH}));
+
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  defs.innerHTML=`<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerW="5" markerH="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="rgba(148,163,184,.32)"/></marker><marker id="aha" viewBox="0 0 10 10" refX="9" refY="5" markerW="5" markerH="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6366f1"/></marker>`;
+  svg.appendChild(defs);
+
+  const mg=document.createElementNS('http://www.w3.org/2000/svg','g');
+  mg.setAttribute('id','mg');mg.setAttribute('transform',`translate(${px},${py}) scale(${sc})`);
+  svg.appendChild(mg);
+
+  const layers=[
+    {x:0.018,y:0.03,w:0.142,h:0.50,l:'USER INPUT & RECOVERY'},
+    {x:0.165,y:0.03,w:0.155,h:0.50,l:'NAVIGATION CORE'},
+    {x:0.330,y:0.03,w:0.135,h:0.50,l:'PLANNING'},
+    {x:0.475,y:0.03,w:0.135,h:0.50,l:'PERCEPTION'},
+    {x:0.715,y:0.03,w:0.120,h:0.50,l:'MAP + MCL'},
+    {x:0.330,y:0.56,w:0.290,h:0.28,l:'QUADRUPED & ROS2 CONTROL'},
+    {x:0.920,y:0.03,w:0.072,h:0.80,l:'GAZEBO + SENSORS'},
+  ];
+  layers.forEach(l=>{
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x',l.x*svgW);bg.setAttribute('y',l.y*svgH);
+    bg.setAttribute('width',l.w*svgW);bg.setAttribute('height',l.h*svgH);
+    bg.setAttribute('class','layer-bg');mg.appendChild(bg);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',(l.x+l.w/2)*svgW);t.setAttribute('y',(l.y)*svgH+12);
+    t.setAttribute('text-anchor','middle');t.setAttribute('class','layer-title');
+    t.textContent=l.l;mg.appendChild(t);
+  });
+
+  E.forEach((ed,i)=>{
+    const fn=nodes.find(n=>n.id===ed.f),tn=nodes.find(n=>n.id===ed.t);
+    if(!fn||!tn)return;
+    const cx1=fn.px+fn.w/2,cy1=fn.py+fn.h/2,cx2=tn.px+tn.w/2,cy2=tn.py+tn.h/2;
+    const ang=Math.atan2(cy2-cy1,cx2-cx1);
+    const sx=cx1+Math.cos(ang)*(fn.w/2+2),sy=cy1+Math.sin(ang)*(fn.h/2+2);
+    const ex=cx2-Math.cos(ang)*(tn.w/2+2),ey=cy2-Math.sin(ang)*(tn.h/2+2);
+    const mx=(sx+ex)/2,my=(sy+ey)/2;
+    const dirs=[-1,1,-2,2,-1.5,1.5,-2.5,2.5,-0.5,0.5,-1,1];
+    const off=dirs[i%dirs.length]*5;
+    const px2=-Math.sin(ang),py2=Math.cos(ang);
+    const lx=mx+px2*off,ly=my+py2*off;
+
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    let d=ed.s==='d'
+      ?`M${sx},${sy} Q${mx},${my-Math.abs(ex-sx)*0.10} ${ex},${ey}`
+      :`M${sx},${sy} L${ex},${ey}`;
+    path.setAttribute('d',d);path.setAttribute('class','edge');path.setAttribute('id','e-'+i);
+    path.setAttribute('marker-end','url(#ah)');
+    path.setAttribute('stroke-dasharray',ed.s==='d'?'4,3':'none');
+    path.setAttribute('stroke-opacity',isMobile?'0.35':'0.7');
+    const tt=document.createElementNS('http://www.w3.org/2000/svg','title');
+    tt.textContent=ed.fl||ed.l;path.appendChild(tt);
+    mg.appendChild(path);
+
+    if(!isMobile||i%2===0){ // fewer labels on mobile
+      const cw=5.8,lw=Math.max(30,ed.l.length*cw+10),lh=13;
+      const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      bg.setAttribute('x',lx-lw/2);bg.setAttribute('y',ly-lh/2);
+      bg.setAttribute('width',lw);bg.setAttribute('height',lh);
+      bg.setAttribute('rx',3);bg.setAttribute('class','elb');bg.setAttribute('id','elb-'+i);
+      mg.appendChild(bg);
+      const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x',lx);lbl.setAttribute('y',ly+3.5);
+      lbl.setAttribute('text-anchor','middle');lbl.setAttribute('class','elt');lbl.setAttribute('id','elt-'+i);
+      lbl.textContent=ed.l;
+      const lt=document.createElementNS('http://www.w3.org/2000/svg','title');
+      lt.textContent=ed.fl||ed.l;lbl.appendChild(lt);
+      mg.appendChild(lbl);
+    }
+  });
+
+  nodes.forEach(nd=>{
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','ng');g.setAttribute('id','n-'+nd.id);g.setAttribute('data-id',nd.id);g.setAttribute('data-group',nd.grp);
+
+    const sh=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    sh.setAttribute('x',nd.px+2);sh.setAttribute('y',nd.py+2);sh.setAttribute('width',nd.w);sh.setAttribute('height',nd.h);
+    sh.setAttribute('rx',7);sh.setAttribute('fill','rgba(0,0,0,.25)');g.appendChild(sh);
+
+    const re=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    re.setAttribute('x',nd.px);re.setAttribute('y',nd.py);re.setAttribute('width',nd.w);re.setAttribute('height',nd.h);
+    re.setAttribute('rx',7);re.setAttribute('fill',nd.cl);re.setAttribute('stroke',nd.sk);re.setAttribute('stroke-width','2');
+    re.setAttribute('class','nb');g.appendChild(re);
+
+    const t1=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t1.setAttribute('x',nd.px+nd.w/2);t1.setAttribute('y',nd.py+(nd.h/2-2));t1.setAttribute('text-anchor','middle');
+    t1.setAttribute('class','nt');t1.textContent=nd.lb;g.appendChild(t1);
+
+    const t2=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t2.setAttribute('x',nd.px+nd.w/2);t2.setAttribute('y',nd.py+nd.h-6);t2.setAttribute('text-anchor','middle');
+    t2.setAttribute('class','ns');t2.textContent=nd.sb;g.appendChild(t2);
+
+    g.addEventListener('click',(e)=>{e.stopPropagation();selNode(nd);if(isMobile)toggleMobilePanel();});
+    g.addEventListener('mouseenter',(e)=>showTT(e,nd));
+    g.addEventListener('mouseleave',hideTT);
+    g.addEventListener('touchstart',(e)=>{showTT(e,nd);}, {passive:true});
+    g.addEventListener('touchend',hideTT);
+    mg.appendChild(g);
+  });
+
+  // pan/zoom
+  svg.addEventListener('mousedown',(e)=>{if(e.target===svg||e.target.closest('.dia')){panning=true;psX=e.clientX;psY=e.clientY;ppsX=px;ppsY=py;svg.classList.add('pan');}});
+  svg.addEventListener('touchstart',(e)=>{if(e.target===svg||e.target.closest('.dia')){if(e.touches.length===1){panning=true;psX=e.touches[0].clientX;psY=e.touches[0].clientY;ppsX=px;ppsY=py;}}},{passive:false});
+  window.addEventListener('mousemove',(e)=>{if(!panning)return;px=ppsX+(e.clientX-psX);py=ppsY+(e.clientY-psY);updateTf();});
+  window.addEventListener('touchmove',(e)=>{if(!panning||e.touches.length!==1)return;px=ppsX+(e.touches[0].clientX-psX);py=ppsY+(e.touches[0].clientY-psY);updateTf();},{passive:false});
+  window.addEventListener('mouseup',()=>{panning=false;svg.classList.remove('pan');});
+  window.addEventListener('touchend',()=>{panning=false;});
+
+  // pinch zoom
+  let lastPinchDist=0;
+  svg.addEventListener('touchstart',(e)=>{
+    if(e.touches.length===2){
+      lastPinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    }
+  },{passive:false});
+  svg.addEventListener('touchmove',(e)=>{
+    if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      if(lastPinchDist>0){sc=Math.min(2,Math.max(.35,sc*(d/lastPinchDist)));updateTf();}
+      lastPinchDist=d;
+    }
+  },{passive:false});
+
+  svg.addEventListener('wheel',(e)=>{e.preventDefault();sc=Math.min(2,Math.max(.35,sc*(e.deltaY>0?.9:1.1)));updateTf();},{passive:false});
+
+  buildFL();
+  // auto-close mobile panel initially
+  if(isMobile){
+    document.getElementById('panelFab').style.opacity='1';
+  }
+}
+function updateTf(){const mg=document.getElementById('mg');if(mg)mg.setAttribute('transform',`translate(${px},${py}) scale(${sc})`);}
+
+function buildFL(){
+  document.getElementById('flowList').innerHTML=S.map((s,i)=>`<div class="si" id="fi${i}" onclick="jump(${i})"><div class="sn">${i+1}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:${isMobile?'11px':'12px'}">${s.t}</div><div style="font-size:${isMobile?'9px':'10px'};color:var(--text-s);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.d.substring(0,50)}</div></div></div>`).join('');
+  document.getElementById('totSteps').textContent=S.length;
+}
+
+// ===================================================================
+// STEP CONTROL
+// ===================================================================
+function jump(i){cs=Math.max(0,Math.min(S.length-1,i));upd();}
+function nxt(){if(cs<S.length-1){cs++;upd();}else stopP();}
+function prv(){if(cs>0){cs--;upd();}}
+function resetAll(){cs=-1;stopP();upd();document.getElementById('stepInfoCard').innerHTML='<h3>🚀 准备就绪</h3><p class="dc">点击<b>播放</b>演示完整全链路通信流程。</p>';document.getElementById('nodeInfoArea').innerHTML='';document.getElementById('statusMsg').textContent='系统就绪 · 全链路: RViz2 → Gazebo → 闭环';}
+function togglePlay(){playing?stopP():startP();}
+function startP(){if(cs>=S.length-1)cs=-1;playing=true;document.getElementById('btnPlay').textContent='⏸ 暂停';document.getElementById('btnPlay').classList.add('pl');doPlay();}
+function stopP(){playing=false;document.getElementById('btnPlay').textContent='▶ 播放';document.getElementById('btnPlay').classList.remove('pl');if(pt){clearTimeout(pt);pt=null;}}
+function doPlay(){if(!playing)return;nxt();if(cs>=S.length-1){if(auto)pt=setTimeout(()=>{cs=-1;doPlay();},spd*1400);else stopP();}else pt=setTimeout(doPlay,spd*1000);}
+function toggleAuto(){auto=!auto;const b=document.getElementById('btnAuto');b.style.background=auto?'rgba(16,185,129,.25)':'';b.style.borderColor=auto?'var(--success)':'';if(auto&&!playing)startP();}
+function updateSpeed(){spd=parseFloat(document.getElementById('speedSlider').value);document.getElementById('speedLabel').textContent=spd.toFixed(1)+'x';}
+
+// ===================================================================
+// UPDATE DISPLAY
+// ===================================================================
+function upd(){
+  isMobile=window.innerWidth<768;
+  document.getElementById('curStep').textContent=cs>=0?cs+1:'—';
+  const pct=cs>=0?Math.round((cs+1)/S.length*100):0;
+  document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressPct').textContent=pct+'%';
+  document.querySelectorAll('.ng').forEach(g=>g.classList.remove('on','hl'));
+  document.querySelectorAll('.edge').forEach(e=>{e.classList.remove('on');e.setAttribute('marker-end','url(#ah)');});
+  document.querySelectorAll('.elt').forEach(l=>l.classList.remove('on'));
+  document.querySelectorAll('.si').forEach(el=>el.classList.remove('cu'));
+  if(cs>=0&&cs<S.length){
+    const s=S[cs],item=document.getElementById('fi'+cs);
+    if(item){item.classList.add('cu');item.scrollIntoView({block:'nearest',behavior:'smooth'});}
+    s.n.forEach(nid=>{const g=document.getElementById('n-'+nid);if(g)g.classList.add('on');});
+    s.e.forEach(eid=>{
+      const e=document.getElementById('e-'+eid);if(e){e.classList.add('on');e.setAttribute('marker-end','url(#aha)');}
+      const l=document.getElementById('elt-'+eid);if(l)l.classList.add('on');
+    });
+    document.getElementById('stepInfoCard').innerHTML=`<h3>${s.t}</h3><p class="dc">${s.d}</p>`;
+    document.getElementById('progressPhase').textContent=s.t;document.getElementById('statusMsg').textContent=`进行中: ${s.t}`;
+  }
+  if(highG)applyHG();
+}
+
+// ===================================================================
+// NODE / GROUP / TOOLTIP
+// ===================================================================
+function selNode(nd){
+  document.querySelectorAll('.ng').forEach(g=>g.classList.remove('hl'));
+  const g=document.getElementById('n-'+nd.id);if(g)g.classList.add('hl');
+  document.getElementById('nodeInfoArea').innerHTML=`<div class="ndp"><h4>🔍 ${nd.lb}</h4><ul><li><b>功能:</b> ${nd.sb}</li><li><b>包:</b> ${nd.dt.pkg}</li><li><b>类型:</b> ${nd.dt.type}</li><li><b>话题/接口:</b> ${nd.dt.top}</li><li><b>详情:</b> ${nd.dt.desc}</li></ul></div>`;
+  document.getElementById('nodeInfoArea').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function highlightGroup(grp){
+  if(highG===grp){highG=null;document.querySelectorAll('.ng').forEach(g=>g.classList.remove('on'));upd();return;}
+  highG=grp;document.querySelectorAll('.ng').forEach(g=>g.classList.remove('on','hl'));applyHG();
+}
+function applyHG(){document.querySelectorAll('.ng').forEach(g=>{if(g.getAttribute('data-group')===highG)g.classList.add('on');});}
+function showTT(e,nd){
+  const tt=document.getElementById('tooltip');
+  const txt=`<b>${nd.lb}</b><br><span style="color:#94a3b8;font-size:9px">${nd.sb}</span><br><span style="color:#a5b4fc;font-size:9px">${nd.dt.pkg}</span>`;
+  tt.innerHTML=txt;
+  let cx,cy;
+  if(e.touches&&e.touches.length>0){cx=e.touches[0].clientX;cy=e.touches[0].clientY;}
+  else{cx=e.clientX;cy=e.clientY;}
+  // keep tooltip in viewport
+  const mw=isMobile?200:280;
+  tt.style.left=Math.min(cx+14,window.innerWidth-mw-10)+'px';
+  tt.style.top=(cy+10)+'px';tt.classList.add('on');
+}
+function hideTT(){document.getElementById('tooltip').classList.remove('on');}
+function toggleCollapsible(id){document.getElementById(id).classList.toggle('op');}
+
+// ===================================================================
+// RESIZE
+// ===================================================================
+let rsz=false,rszX,rszW;
+document.getElementById('resizeHandle').addEventListener('mousedown',(e)=>{
+  if(isMobile)return;
+  rsz=true;rszX=e.clientX;rszW=document.getElementById('sidePanel').offsetWidth;
+  document.getElementById('resizeHandle').classList.add('dr');e.preventDefault();
+});
+window.addEventListener('mousemove',(e)=>{if(!rsz)return;const w=rszW-(e.clientX-rszX);if(w>=240&&w<=540)document.getElementById('sidePanel').style.width=w+'px';});
+window.addEventListener('mouseup',()=>{if(rsz){rsz=false;document.getElementById('resizeHandle').classList.remove('dr');setTimeout(init,100);}});
+window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(init,350);});
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
