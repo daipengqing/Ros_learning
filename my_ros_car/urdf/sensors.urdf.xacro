@@ -1,0 +1,137 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ====================================================== -->
+  <!--                  Sensors Macro                         -->
+  <!-- ====================================================== -->
+
+  <xacro:macro name="sensors">
+
+    <!-- ====================================================== -->
+    <!--                       LiDAR                            -->
+    <!-- ====================================================== -->
+
+    <link name="laser_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.03" length="0.04"/>
+        </geometry>
+        <material name="DarkGray">
+          <color rgba="0.25 0.25 0.25 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.03" length="0.04"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0"/>
+        <mass value="0.10"/>
+        <inertia
+            ixx="0.00005"
+            ixy="0"
+            ixz="0"
+            iyy="0.00005"
+            iyz="0"
+            izz="0.00005"/>
+      </inertial>
+    </link>
+
+    <joint name="laser_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="laser_link"/>
+      <origin xyz="0.15 0 0.08" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ====================================================== -->
+    <!--                         IMU                            -->
+    <!-- ====================================================== -->
+
+    <link name="imu_link">
+      <visual>
+        <geometry>
+          <box size="0.03 0.03 0.01"/>
+        </geometry>
+        <material name="Blue">
+          <color rgba="0 0.3 0.9 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.03 0.03 0.01"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.05"/>
+        <origin xyz="0 0 0"/>
+        <inertia
+            ixx="0.00001"
+            ixy="0"
+            ixz="0"
+            iyy="0.00001"
+            iyz="0"
+            izz="0.00001"/>
+      </inertial>
+    </link>
+
+    <joint name="imu_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="imu_link"/>
+      <origin xyz="0 0 0.03" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ====================================================== -->
+    <!--                     RGB Camera                         -->
+    <!-- ====================================================== -->
+
+    <link name="camera_link">
+      <visual>
+        <geometry>
+          <box size="0.04 0.04 0.03"/>
+        </geometry>
+        <material name="Black">
+          <color rgba="0.1 0.1 0.1 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.04 0.04 0.03"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.08"/>
+        <origin xyz="0 0 0"/>
+        <inertia
+            ixx="0.00002"
+            ixy="0"
+            ixz="0"
+            iyy="0.00002"
+            iyz="0"
+            izz="0.00002"/>
+      </inertial>
+    </link>
+
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="0.17 0 0.07" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ====================================================== -->
+    <!--               Camera Optical Frame                     -->
+    <!-- ====================================================== -->
+
+    <link name="camera_optical_frame"/>
+    <joint name="camera_optical_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_optical_frame"/>
+      <!-- REP-103 Camera Optical Frame -->
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

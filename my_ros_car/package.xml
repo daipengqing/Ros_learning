@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>my_ros_car</name>
+  <version>0.0.1</version>
+  <description>四轮差速机器人 Gazebo 仿真包</description>
+  <maintainer email="1227059712@qq.com">Langzi0805</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 核心依赖 -->
+  <depend>urdf</depend>
+  <depend>xacro</depend>
+  <depend>ros_gz_sim</depend>
+  <depend>gz_ros2_control</depend>
+  <depend>controller_manager</depend>
+  <depend>diff_drive_controller</depend>
+  <depend>joint_state_broadcaster</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>tf2_ros</depend>
+  <depend>rviz2</depend>
+
+  <!-- 传感器支持 -->
+  <depend>imu_sensor_broadcaster</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

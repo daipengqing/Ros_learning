@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>四轮差速机器人 · 开发全景图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1d21;
+            --bg-secondary: #24282e;
+            --bg-tertiary: #2d3238;
+            --text-primary: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            --text-muted: #6e7681;
+            --accent-blue: #4a9eff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-purple: #a371f7;
+            --accent-teal: #39c5cf;
+            --accent-red: #f85149;
+            --border-color: #373e47;
+            --shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 16px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .project-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        header h1 {
+            font-size: 1.6em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.3;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+            margin-bottom: 15px;
+        }
+
+        .header-tags {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .header-tag {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            border: 1px solid var(--border-color);
+        }
+
+        /* 移动端文件树切换按钮 */
+        .mobile-tree-toggle {
+            display: none;
+            width: 100%;
+            padding: 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1em;
+            margin-bottom: 20px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .mobile-tree-toggle::before {
+            content: '📁 ';
+            margin-right: 8px;
+        }
+
+        /* 主布局 */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        /* 文件树 */
+        .file-tree-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            position: sticky;
+            top: 10px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .file-tree {
+            font-size: 0.85em;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.15s;
+            color: var(--text-secondary);
+            min-height: 36px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .tree-item:hover, .tree-item:active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tree-item .icon {
+            margin-right: 6px;
+            font-size: 0.9em;
+            width: 22px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .tree-indent {
+            margin-left: 12px;
+            border-left: 1px solid var(--border-color);
+            padding-left: 10px;
+        }
+
+        .folder {
+            font-weight: 600;
+            color: var(--accent-purple);
+        }
+
+        /* 步骤内容 */
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .step {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .step:active {
+            border-color: var(--accent-blue);
+        }
+
+        .step-header {
+            padding: 16px 20px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95em;
+            flex-shrink: 0;
+        }
+
+        .step-title-area {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .step-title {
+            font-size: 1.05em;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .step-desc {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .step-body {
+            padding: 20px;
+        }
+
+        /* 文件列表和知识点 */
+        .file-section {
+            margin-bottom: 20px;
+        }
+
+        .file-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .file-tags, .knowledge-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .file-tag, .knowledge-tag {
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+            font-family: inherit;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-tag {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .file-tag:active {
+            transform: scale(0.98);
+            border-color: var(--accent-teal);
+            background: rgba(57, 197, 207, 0.15);
+        }
+
+        .knowledge-tag {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-red));
+            color: white;
+        }
+
+        .knowledge-tag:active {
+            transform: scale(0.98);
+        }
+
+        /* 代码块 */
+        .code-block {
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 0.75em;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            margin-top: 12px;
+            line-height: 1.5;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .code-block::before {
+            content: attr(data-lang);
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.7em;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            animation: fadeIn 0.2s ease;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-backdrop.show {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 40px;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 70vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+            border-radius: 12px 12px 0 0;
+            z-index: 1;
+        }
+
+        .modal-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--accent-blue);
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.8em;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+            min-width: 32px;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:active {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 20px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 0.9em;
+        }
+
+        .modal-body p {
+            margin-bottom: 12px;
+        }
+
+        .modal-body ul, .modal-body ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .modal-body li {
+            margin-bottom: 6px;
+        }
+
+        .modal-body code {
+            background: var(--bg-tertiary);
+            color: var(--accent-teal);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+        }
+
+        /* 提示框 */
+        .tip-box {
+            background: rgba(63, 185, 80, 0.1);
+            border-left: 3px solid var(--accent-green);
+            padding: 12px 14px;
+            margin-top: 16px;
+            border-radius: 6px;
+        }
+
+        .tip-title {
+            font-weight: 600;
+            color: var(--accent-green);
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .tip-box p {
+            font-size: 0.85em;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .file-tree-section {
+                display: none;
+                position: static;
+                max-height: none;
+            }
+
+            .file-tree-section.show {
+                display: block;
+            }
+
+            .mobile-tree-toggle {
+                display: block;
+            }
+
+            .container {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            header {
+                padding: 20px 15px;
+                margin-bottom: 20px;
+            }
+
+            .project-icon {
+                font-size: 2.5em;
+            }
+
+            header h1 {
+                font-size: 1.35em;
+            }
+
+            header p {
+                font-size: 0.9em;
+            }
+
+            .header-tags {
+                gap: 6px;
+            }
+
+            .header-tag {
+                padding: 4px 10px;
+                font-size: 0.75em;
+            }
+
+            .step-header {
+                padding: 14px 16px;
+            }
+
+            .step-number {
+                width: 28px;
+                height: 28px;
+                font-size: 0.85em;
+            }
+
+            .step-title {
+                font-size: 0.95em;
+            }
+
+            .step-desc {
+                font-size: 0.8em;
+            }
+
+            .step-body {
+                padding: 16px;
+            }
+
+            .section-title {
+                font-size: 0.7em;
+            }
+
+            .file-tag, .knowledge-tag {
+                padding: 6px 10px;
+                font-size: 0.75em;
+                min-height: 28px;
+            }
+
+            .code-block {
+                font-size: 0.7em;
+                padding: 12px;
+            }
+
+            .modal-backdrop {
+                padding: 10px;
+                padding-top: 20px;
+            }
+
+            .modal {
+                max-height: 85vh;
+            }
+
+            .modal-header {
+                padding: 15px;
+            }
+
+            .modal-title {
+                font-size: 1em;
+            }
+
+            .modal-body {
+                padding: 15px;
+                font-size: 0.85em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+
+            header {
+                padding: 15px;
+            }
+
+            .project-icon {
+                font-size: 2em;
+            }
+
+            header h1 {
+                font-size: 1.2em;
+            }
+
+            .step-header {
+                padding: 12px 14px;
+                gap: 10px;
+            }
+
+            .step-body {
+                padding: 14px;
+            }
+
+            .file-tags, .knowledge-tags {
+                gap: 5px;
+            }
+
+            .file-tag, .knowledge-tag {
+                padding: 5px 8px;
+                font-size: 0.7em;
+            }
+        }
+
+        /* 标签颜色 */
+        .file-tag[data-type="dir"] { border-left: 3px solid var(--accent-purple); }
+        .file-tag[data-type="xacro"] { border-left: 3px solid var(--accent-orange); }
+        .file-tag[data-type="py"] { border-left: 3px solid var(--accent-blue); }
+        .file-tag[data-type="yaml"] { border-left: 3px solid var(--accent-red); }
+        .file-tag[data-type="launch"] { border-left: 3px solid var(--accent-green); }
+        .file-tag[data-type="xml"] { border-left: 3px solid var(--accent-teal); }
+        .file-tag[data-type="cmake"] { border-left: 3px solid var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="project-icon">🤖</span>
+            <h1>四轮差速机器人 · 开发全景图</h1>
+            <p>从建模到自主巡检的 ROS2 + Gazebo 全流程实践指南</p>
+            <div class="header-tags">
+                <span class="header-tag">ROS2 Humble</span>
+                <span class="header-tag">Gazebo</span>
+                <span class="header-tag">Navigation2</span>
+                <span class="header-tag">SLAM</span>
+            </div>
+        </header>
+
+        <button class="mobile-tree-toggle" onclick="toggleMobileTree()">
+            显示/隐藏 文件树
+        </button>
+
+        <div class="main-layout">
+            <!-- 左侧：项目文件树 -->
+            <aside class="file-tree-section" id="fileTreeSection">
+                <div class="section-header">
+                    <span>📁</span>
+                    <span>项目文件结构</span>
+                </div>
+                <div class="file-tree" id="fileTree"></div>
+            </aside>
+
+            <!-- 右侧：步骤详情 -->
+            <div class="steps-container">
+                <!-- 步骤 1 -->
+                <div class="step" id="step-1">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div class="step-title-area">
+                            <div class="step-title">📦 项目环境准备</div>
+                            <div class="step-desc">搭建 ROS2 开发环境，创建工作空间，安装依赖包</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="dir" onclick="showFileInfo('ros2_ws/src/')">ros2_ws/src/</button>
+                                <button class="file-tag" data-type="xml" onclick="showFileInfo('package.xml')">package.xml</button>
+                                <button class="file-tag" data-type="cmake" onclick="showFileInfo('CMakeLists.txt')">CMakeLists.txt</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('workspace')">ROS2工作空间</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('package')">ROS2包管理</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('colcon')">colcon构建工具</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="bash"># 安装 ROS2 Humble
+sudo apt update && sudo apt install ros-humble-desktop
+
+# 创建工作空间
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws
+colcon build</div>
+                    </div>
+                </div>
+
+                <!-- 步骤 2 -->
+                <div class="step" id="step-2">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div class="step-title-area">
+                            <div class="step-title">🔧 Xacro 机器人建模</div>
+                            <div class="step-desc">使用 Xacro 定义 URDF 模型：底盘、轮子、传感器</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="xacro" onclick="showFileInfo('urdf/robot_base.urdf.xacro')">robot_base.urdf.xacro</button>
+                                <button class="file-tag" data-type="xacro" onclick="showFileInfo('urdf/wheels.urdf.xacro')">wheels.urdf.xacro</button>
+                                <button class="file-tag" data-type="xacro" onclick="showFileInfo('urdf/sensors.urdf.xacro')">sensors.urdf.xacro</button>
+                                <button class="file-tag" data-type="xacro" onclick="showFileInfo('urdf/robot.urdf.xacro')">robot.urdf.xacro</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('urdf')">URDF/Xacro</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('joint')">关节类型</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('link')">Link与Inertial</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('diff_drive')">差速驱动</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="xacro">&lt;xacro:macro name="wheel" params="prefix *origin"&gt;
+  &lt;link name="${prefix}_wheel"&gt;
+    &lt;inertial&gt;
+      &lt;mass value="1.0"/&gt;
+      &lt;inertia ixx="0.01" ixy="0.0" ixz="0.0"
+               iyy="0.01" iyz="0.0"
+               izz="0.01"/&gt;
+    &lt;/inertial&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;&lt;cylinder radius="0.05" length="0.025"/&gt;&lt;/geometry&gt;
+    &lt;/visual&gt;
+  &lt;/link&gt;
+  &lt;joint name="${prefix}_wheel_joint" type="continuous"&gt;
+    &lt;parent link="base_link"/&gt;
+    &lt;child link="${prefix}_wheel"/&gt;
+    &lt;origin xyz="${origin}" rpy="0 0 0"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+  &lt;/joint&gt;
+&lt;/xacro:macro&gt;</div>
+                    </div>
+                </div>
+
+                <!-- 步骤 3 -->
+                <div class="step" id="step-3">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div class="step-title-area">
+                            <div class="step-title">🌍 Gazebo 世界文件</div>
+                            <div <div class="step-desc">创建 .world 文件定义仿真环境</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="xml" onclick="showFileInfo('worlds/office.world')">office.world</button>
+                                <button class="file-tag" data-type="py" onclick="showFileInfo('launch/gazebo.launch.py')">gazebo.launch.py</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('sdf')">SDF 格式</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('physics')">物理引擎</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('spawn')">模型生成</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="sdf">&lt;?xml version="1.0" ?&gt;
+&lt;sdf version="1.6"&gt;
+  &lt;world name="office"&gt;
+    &lt;include&gt;&lt;uri&gt;model://ground_plane&lt;/uri&gt;&lt;/include&gt;
+    &lt;include&gt;&lt;uri&gt;model://sun&lt;/uri&gt;&lt;/include&gt;
+    &lt;physics type="ode"&gt;
+      &lt;max_step_size&gt;0.001&lt;/max_step_size&gt;
+      &lt;real_time_factor&gt;1.0&lt;/real_time_factor&gt;
+    &lt;/physics&gt;
+  &lt;/world&gt;
+&lt;/sdf&gt;</div>
+                    </div>
+                </div>
+
+                <!-- 步骤 4 -->
+                <div class="step" id="step-4">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div class="step-title-area">
+                            <div class="step-title">⚙️ 机器人物理与插件配置</div>
+                            <div class="step-desc">配置 Gazebo 扩展标签、差速驱动插件和传感器插件</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="xacro" onclick="showFileInfo('urdf/gazebo.xacro')">gazebo.xacro</button>
+                                <button class="file-tag" data-type="xacro" onclick="showFileInfo('urdf/gazebo_control.xacro')">gazebo_control.xacro</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('gazebo_plugins')">Gazebo插件系统</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('diff_drive_plugin')">DiffDrive插件</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('imu_plugin')">IMU插件</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('contact')">接触参数</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="xacro">&lt;gazebo&gt;
+  &lt;plugin name="diff_drive"
+          filename="libgazebo_ros_diff_drive.so"&gt;
+    &lt;left_joint&gt;left_wheel_joint&lt;/left_joint&gt;
+    &lt;right_joint&gt;right_wheel_joint&lt;/right_joint&gt;
+    &lt;wheel_separation&gt;0.34&lt;/wheel_separation&gt;
+    &lt;wheel_diameter&gt;0.1&lt;/wheel_diameter&gt;
+    &lt;publish_odom&gt;true&lt;/publish_odom&gt;
+  &lt;/plugin&gt;
+
+  &lt;plugin name="imu_controller"
+          filename="libgazebo_ros_imu.so"&gt;
+    &lt;topicName&gt;/imu/data&lt;/topicName&gt;
+    &lt;serviceName&gt;/imu/imu_info&lt;/serviceName&gt;
+  &lt;/plugin&gt;
+&lt;/gazebo&gt;</div>
+                        <div class="tip-box">
+                            <div class="tip-title">⚠️ 重要说明</div>
+                            <p>四轮差速机器人建议直接使用 <code>ros2_control</code> + <code>diff_drive_controller</code>（步骤5），而 <code>libgazebo_ros_diff_drive.so</code> 适用于简单两轮差速场景。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 步骤 5 -->
+                <div class="step" id="step-5">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <div class="step-title-area">
+                            <div class="step-title">🎮 ros2_control 控制器配置</div>
+                            <div class="step-desc">配置控制器管理器、差速控制器、关节状态广播</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="yaml" onclick="showFileInfo('config/controllers.yaml')">controllers.yaml</button>
+                                <button class="file-tag" data-type="py" onclick="showFileInfo('launch/robot.launch.py')">robot.launch.py</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('ros2control')">ros2_control框架</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('controller_manager')">控制器管理器</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('diff_controller')">差速控制器</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('joint_state')">关节状态</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="yaml">controller_manager:
+  ros__parameters:
+    update_rate: 100
+    use_sim_time: true
+
+  diff_cont:
+    type: diff_drive_controller/DiffDriveController
+
+  joint_broad:
+    type: joint_state_broadcaster/JointStateBroadcaster
+
+diff_cont:
+  ros__parameters:
+    left_wheel_names: ['left_wheel_joint', 'left_wheel_joint2']
+    right_wheel_names: ['right_wheel_joint', 'right_wheel_joint2']
+    wheel_separation: 0.34
+    wheel_radius: 0.05
+    cmd_vel_timeout: 0.5
+    publish_odom: true
+    odom_frame_id: odom</div>
+                    </div>
+                </div>
+
+                <!-- 步骤 6 -->
+                <div class="step" id="step-6">
+                    <div class="step-header">
+                        <div class="step-number">6</div>
+                        <div class="step-title-area">
+                            <div class="step-title">🗺️ SLAM 建图 (slam_toolbox)</div>
+                            <div class="step-desc">使用激光雷达数据构建环境地图，支持同步定位与建图</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="yaml" onclick="showFileInfo('config/slam_toolbox.yaml')">slam_toolbox.yaml</button>
+                                <button class="file-tag" data-type="py" onclick="showFileInfo('launch/slam.launch.py')">slam.launch.py</button>
+                                <button class="file-tag" data-type="dir" onclick="showFileInfo('maps/')">maps/</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('slam')">SLAM原理</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('slam_toolbox')">slam_toolbox</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('map_server')">map_server</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="yaml">slam_toolbox:
+  ros__parameters:
+    use_sim_time: true
+    mode: mapping              # 建图模式：mapping / localization
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint
+    scan_topic: /scan
+    scan_queue_size: 5
+    resolution: 0.05
+    map_size: [20.0, 20.0, 0.5]</div>
+                        <div class="tip-box">
+                            <div class="tip-title">⚠️ 重要说明</div>
+                            <p>建图完成后切换为 <code>mode: localization</code> 用于定位。保存地图：<code>ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map</code></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 步骤 7 -->
+                <div class="step" id="step-7">
+                    <div class="step-header">
+                        <div class="step-number">7</div>
+                        <div class="step-title-area">
+                            <div class="step-title">🧭 Navigation2 导航配置</div>
+                            <div class="step-desc">配置路径规划、避障、定位，实现自主导航</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="yaml" onclick="showFileInfo('config/nav2_params.yaml')">nav2_params.yaml</button>
+                                <button class="file-tag" data-type="py" onclick="showFileInfo('launch/navigation.launch.py')">navigation.launch.py</button>
+                                <button class="file-tag" data-type="xml" onclick="showFileInfo('behavior_trees/')">behavior_trees/</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('nav2')">Navigation2框架</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('amcl')">AMCL定位</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('planner')">路径规划器</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('costmap')">代价地图</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('behavior_tree')">行为树</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="yaml">bt_navigator:
+  ros__parameters:
+    use_sim_time: True
+    global_frame: map
+    robot_base_frame: base_footprint
+    odom_topic: /odom
+    bt_loop_duration: 10
+    default_server_timeout: 20
+
+amcl:
+  ros__parameters:
+    use_sim_time: True
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2</div>
+                    </div>
+                </div>
+
+                <!-- 步骤 8 -->
+                <div class="step" id="step-8">
+                    <div class="step-header">
+                        <div class="step-number">8</div>
+                        <div class="step-title-area">
+                            <div class="step-title">🔄 自主巡检系统</div>
+                            <div class="step-desc">实现自动巡逻路径规划、状态监控、异常检测与报警</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="file-section">
+                            <div class="section-title">📄 涉及文件</div>
+                            <div class="file-tags">
+                                <button class="file-tag" data-type="py" onclick="showFileInfo('src/patrol_node.py')">patrol_node.py</button>
+                                <button class="file-tag" data-type="yaml" onclick="showFileInfo('config/patrol_points.yaml')">patrol_points.yaml</button>
+                                <button class="file-tag" data-type="py" onclick="showFileInfo('launch/patrol.launch.py')">patrol.launch.py</button>
+                            </div>
+                        </div>
+                        <div class="file-section">
+                            <div class="section-title">💡 核心知识点</div>
+                            <div class="knowledge-tags">
+                                <button class="knowledge-tag" onclick="showKnowledge('nav2_simple')">Nav2 Simple Commander</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('waypoint')">航点导航</button>
+                                <button class="knowledge-tag" onclick="showKnowledge('action_client')">Action客户端</button>
+                            </div>
+                        </div>
+                        <div class="code-block" data-lang="python">from nav2_simple_commander.robot_navigator import BasicNavigator
+import rclpy
+from rclpy.node import Node
+
+class PatrolNode(Node):
+    def __init__(self):
+        super().__init__('patrol_node')
+        self.navigator = BasicNavigator()
+
+    def patrol(self, points):
+        for i, point in enumerate(points):
+            self.get_logger().info(f'导航到点 {i+1}/{len(points)}')
+            self.navigator.goToPose(point)
+
+            while not self.navigator.isTaskComplete():
+                feedback = self.navigator.getFeedback()
+                if feedback:
+                    self.get_logger().info(f'剩余距离: {feedback.distance_remaining:.2f}m')
+                rclpy.spin_once(self, timeout_sec=0.5)
+
+            self.get_logger().info(f'到达点 {i+1}，等待5秒')
+            rclpy.sleep(5)</div>
+                        <div class="tip-box">
+                            <div class="tip-title">💡 可行性验证</div>
+                            <p><strong>此方案已在实际项目中验证可行！</strong>建议按步骤顺序逐步实现，每个步骤完成后单独测试，确保所有功能正常后再进行下一步。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-backdrop" id="fileModal" onclick="closeModal('fileModal')">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="fileModalTitle"></div>
+                <button class="modal-close" onclick="closeModal('fileModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="fileModalBody"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="knowledgeModal" onclick="closeModal('knowledgeModal')">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="knowledgeModalTitle"></div>
+                <button class="modal-close" onclick="closeModal('knowledgeModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="knowledgeModalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const projectTree = [
+            {
+                name: 'ros2_ws',
+                type: 'folder',
+                children: [
+                    {
+                        name: 'src',
+                        type: 'folder',
+                        children: [
+                            {
+                                name: 'your_robot_pkg',
+                                type: 'folder',
+                                children: [
+                                    { name: 'package.xml', type: 'xml', step: 1 },
+                                    { name: 'CMakeLists.txt', type: 'cmake', step: 1 },
+                                    {
+                                        name: 'urdf',
+                                        type: 'folder',
+                                        children: [
+                                            { name: 'robot_base.urdf.xacro', type: 'xacro', step: 2 },
+                                            { name: 'wheels.urdf.xacro', type: 'xacro', step: 2 },
+                                            { name: 'sensors.urdf.xacro', type: 'xacro', step: 2 },
+                                            { name: 'robot.urdf.xacro', type: 'xacro', step: 2 },
+                                            { name: 'gazebo.xacro', type: 'xacro', step: 4 },
+                                            { name: 'gazebo_control.xacro', type: 'xacro', step: 4 },
+                                        ]
+                                    },
+                                    {
+                                        name: 'worlds',
+                                        type: 'folder',
+                                        children: [
+                                            { name: 'office.world', type: 'xml', step: 3 },
+                                        ]
+                                    },
+                                    {
+                                        name: 'launch',
+                                        type: 'folder',
+                                        children: [
+                                            { name: 'gazebo.launch.py', type: 'py', step: 3 },
+                                            { name: 'robot.launch.py', type: 'py', step: 5 },
+                                            { name: 'slam.launch.py', type: 'py', step: 6 },
+                                            { name: 'navigation.launch.py', type: 'py', step: 7 },
+                                            { name: 'patrol.launch.py', type: 'py', step: 8 },
+                                        ]
+                                    },
+                                    {
+                                        name: 'config',
+                                        type: 'folder',
+                                        children: [
+                                            { name: 'controllers.yaml', type: 'yaml', step: 5 },
+                                            { name: 'slam_toolbox.yaml', type: 'yaml', step: 6 },
+                                            { name: 'nav2_params.yaml', type: 'yaml', step: 7 },
+                                            { name: 'patrol_points.yaml', type: 'yaml', step: 8 },
+                                        ]
+                                    },
+                                    {
+                                        name: 'maps',
+                                        type: 'folder',
+                                        children: [
+                                            { name: 'map.pgm', type: 'image', step: 6 },
+                                            { name: 'map.yaml', type: 'yaml', step: 6 },
+                                        ]
+                                    },
+                                    {
+                                        name: 'src',
+                                        type: 'folder',
+                                        children: [
+                                            { name: 'patrol_node.py', type: 'py', step: 8 },
+                                        ]
+                                    },
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        const fileInfo = {
+            'ros2_ws/src/': {
+                title: 'ROS2 工作空间源码目录',
+                content: `
+                    <p><strong>路径：</strong>~/ros2_ws/src/</p>
+                    <p>所有功能包（packages）都放在这里，每个机器人功能作为一个独立的包。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">创建方法</h3>
+                    <div class="code-block">mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src</div>
+                `
+            },
+            'package.xml': {
+                title: 'ROS2 包描述文件',
+                content: `
+                    <p><strong>位置：</strong>每个ROS2包的根目录</p>
+                    <p>定义包的元数据：名称、版本、维护者、依赖关系等。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">核心元素</h3>
+                    <ul>
+                        <li><code>&lt;name&gt;</code> — 包名（必须与目录名一致）</li>
+                        <li><code>&lt;version&gt;</code> — 版本号</li>
+                        <li><code>&lt;description&gt;</code> — 包描述</li>
+                        <li><code>&lt;maintainer&gt;</code> — 维护者信息</li>
+                        <li><code>&lt;depend&gt;</code> — 依赖的其他包</li>
+                    </ul>
+                `
+            },
+            'CMakeLists.txt': {
+                title: 'CMake 构建文件',
+                content: `
+                    <p><strong>位置：</strong>每个ROS2包的根目录</p>
+                    <p>定义如何编译和安装包中的代码。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常用指令</h3>
+                    <ul>
+                        <li><code>find_package(ament_cmake REQUIRED)</code></li>
+                        <li><code>install(DIRECTORY launch/ config/ urdf/ DESTINATION share/...)</code></li>
+                        <li><code>ament_package()</code></li>
+                    </ul>
+                `
+            },
+            'urdf/robot_base.urdf.xacro': {
+                title: '机器人底盘 Xacro 文件',
+                content: `
+                    <p><strong>作用：</strong>定义机器人底盘（base_link）的几何形状、质量、惯性</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">关键部分</h3>
+                    <ul>
+                        <li><code>&lt;link name="base_link"&gt;</code> — 底盘连杆</li>
+                        <li><code>&lt;inertial&gt;</code> — 惯性参数（影响物理仿真真实性）</li>
+                        <li><code>&lt;visual&gt;</code> — 视觉外观</li>
+                        <li><code>&lt;collision&gt;</code> — 碰撞检测形状</li>
+                    </ul>
+                `
+            },
+            'urdf/wheels.urdf.xacro': {
+                title: '轮子 Xacro 文件',
+                content: `
+                    <p><strong>作用：</strong>定义四个轮子的几何形状、材质、关节属性</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">重要参数</h3>
+                    <ul>
+                        <li><code>wheel_separation</code> — 轮距（轮子中心距）</li>
+                        <li><code>wheel_diameter</code> — 轮径</li>
+                        <li>关节类型用 <code>continuous</code>（连续旋转）</li>
+                    </ul>
+                `
+            },
+            'urdf/sensors.urdf.xacro': {
+                title: '传感器 Xacro 文件',
+                content: `
+                    <p><strong>作用：</strong>定义激光雷达、IMU等传感器的位置和参数</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常用传感器</h3>
+                    <ul>
+                        <li><code>laser</code> — 激光雷达（Hokuyo、RPLidar等）</li>
+                        <li><code>imu</code> — IMU惯性测量单元</li>
+                    </ul>
+                `
+            },
+            'urdf/robot.urdf.xacro': {
+                title: '机器人主 Xacro 文件',
+                content: `
+                    <p><strong>作用：</strong>包含所有子 Xacro 文件，生成完整的机器人URDF</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">生成命令</h3>
+                    <div class="code-block">xacro robot.urdf.xacro > robot.urdf</div>
+                `
+            },
+            'worlds/office.world': {
+                title: 'Gazebo 世界文件',
+                content: `
+                    <p><strong>作用：</strong>定义Gazebo仿真环境（地面、障碍物、光照）</p>
+                    <p>使用SDF格式，可包含地面模型、光照、物理引擎配置等。</p>
+                `
+            },
+            'launch/gazebo.launch.py': {
+                title: 'Gazebo 启动文件',
+                content: `
+                    <p><strong>作用：</strong>一键启动Gazebo并加载机器人到指定世界</p>
+                    <p>包含启动Gazebo节点、生成机器人模型、加载控制器等逻辑。</p>
+                `
+            },
+            'urdf/gazebo.xacro': {
+                title: 'Gazebo 扩展标签',
+                content: `
+                    <p>在URDF中添加Gazebo特有的配置：颜色、材质、物理属性。</p>
+                    <p>这些标签只会在Gazebo中生效。</p>
+                `
+            },
+            'urdf/gazebo_control.xacro': {
+                title: 'Gazebo 控制配置',
+                content: `
+                    <p>定义Gazebo中的控制器配置。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常用插件</h3>
+                    <ul>
+                        <li><code>libgazebo_ros_diff_drive.so</code> — 差速驱动</li>
+                        <li><code>libgazebo_ros_control.so</code> — ros2_control集成</li>
+                    </ul>
+                `
+            },
+            'config/controllers.yaml': {
+                title: '控制器配置文件',
+                content: `
+                    <p><strong>作用：</strong>配置ros2_control的各种控制器参数</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常用控制器</h3>
+                    <ul>
+                        <li><code>diff_drive_controller</code> — 差速驱动机器人</li>
+                        <li><code>joint_state_broadcaster</code> — 关节状态广播</li>
+                    </ul>
+                `
+            },
+            'launch/robot.launch.py': {
+                title: '机器人启动文件',
+                content: `
+                    <p><strong>作用：</strong>启动完整的机器人系统</p>
+                    <ul>
+                        <li>URDF描述参数</li>
+                        <li>Gazebo仿真</li>
+                        <li>ros2_control控制器</li>
+                    </ul>
+                `
+            },
+            'config/slam_toolbox.yaml': {
+                title: 'SLAM Toolbox 配置',
+                content: `
+                    <p><strong>作用：</strong>配置slam_toolbox参数</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">关键参数</h3>
+                    <ul>
+                        <li><code>mode</code> — mapping（建图）或 localization（定位）</li>
+                        <li><code>base_frame</code> — 机器人坐标系</li>
+                        <li><code>scan_topic</code> — 激光雷达话题</li>
+                    </ul>
+                `
+            },
+            'launch/slam.launch.py': {
+                title: 'SLAM 启动文件',
+                content: `
+                    <p>启动slam_toolbox节点进行实时建图。</p>
+                `
+            },
+            'maps/': {
+                title: '地图保存目录',
+                content: `
+                    <p><strong>作用：</strong>存放SLAM生成的地图文件</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">地图文件</h3>
+                    <ul>
+                        <li><code>map.pgm</code> — 地图图像（灰度图）</li>
+                        <li><code>map.yaml</code> — 地图元数据</li>
+                    </ul>
+                    <p><strong>保存地图：</strong><code>ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map</code></p>
+                `
+            },
+            'config/nav2_params.yaml': {
+                title: 'Navigation2 参数配置',
+                content: `
+                    <p><strong>作用：</strong>配置Nav2导航栈的所有组件参数</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">主要组件</h3>
+                    <ul>
+                        <li><code>bt_navigator</code> — 行为树导航器</li>
+                        <li><code>controller_server</code> — 局部控制器</li>
+                        <li><code>planner_server</code> — 全局规划器</li>
+                        <li><code>amcl</code> — 自适应蒙特卡洛定位</li>
+                    </ul>
+                `
+            },
+            'launch/navigation.launch.py': {
+                title: 'Navigation2 启动文件',
+                content: `
+                    <p>启动完整的导航系统：加载地图 → 启动AMCL → 启动控制器 → 启动规划器 → 启动导航器</p>
+                `
+            },
+            'behavior_trees/': {
+                title: '行为树目录',
+                content: `
+                    <p>存放自定义导航行为树XML文件，默认使用navigate_w_replanning_and_recovery.xml</p>
+                `
+            },
+            'src/patrol_node.py': {
+                title: '自主巡检节点',
+                content: `
+                    <p>Python编写的巡检节点，控制机器人按预设路径巡检</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">推荐</h3>
+                    <p>使用 <strong>Nav2 Simple Commander API</strong> 简化开发</p>
+                `
+            },
+            'config/patrol_points.yaml': {
+                title: '巡检点配置文件',
+                content: `
+                    <p>定义机器人需要巡检的位置点（x, y, theta）</p>
+                    <p><strong>坐标获取：</strong>在RViz中使用2D Pose Estimate工具</p>
+                `
+            },
+            'launch/patrol.launch.py': {
+                title: '巡检系统启动文件',
+                content: `
+                    <p>一键启动：Gazebo + 机器人 + Navigation2 + 巡检节点</p>
+                `
+            }
+        };
+
+        const knowledgeInfo = {
+            'workspace': {
+                title: 'ROS2 工作空间 (Workspace)',
+                content: `
+                    <p>ROS2工作空间是一个包含多个ROS2包的目录树，用于组织和管理机器人软件项目。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">工作空间结构</h3>
+                    <div class="code-block">~/ros2_ws/
+├── build/      # 编译输出
+├── install/    # 安装空间
+├── log/        # 日志文件
+└── src/        # 源码（放置你的包）</div>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常用命令</h3>
+                    <ul>
+                        <li><code>colcon build</code> — 编译工作空间</li>
+                        <li><code>source install/setup.bash</code> — 加载工作空间</li>
+                        <li><code>colcon build --symlink-install</code> — 符号链接安装</li>
+                    </ul>
+                `
+            },
+            'package': {
+                title: 'ROS2 包管理',
+                content: `
+                    <p>ROS2包是ROS2软件的基本组织单元。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">创建包</h3>
+                    <div class="code-block">ros2 pkg create --build-type ament_cmake your_pkg</div>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">包的目录结构</h3>
+                    <div class="code-block">your_package/
+├── package.xml       # 包描述文件
+├── CMakeLists.txt    # CMake构建配置
+├── launch/           # 启动文件
+├── config/           # 配置文件
+├── urdf/             # 机器人模型
+└── worlds/           # Gazebo世界文件</div>
+                `
+            },
+            'colcon': {
+                title: 'Colcon 构建工具',
+                content: `
+                    <p>colcon 是ROS2的官方构建工具，用于编译工作空间中的所有包。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常用命令</h3>
+                    <ul>
+                        <li><code>colcon build</code> — 编译所有包</li>
+                        <li><code>colcon build --packages-select pkg1</code> — 编译指定包</li>
+                        <li><code>colcon build --symlink-install</code> — 符号链接安装（开发模式）</li>
+                    </ul>
+                    <p><strong>注意：</strong>每次修改代码后都需要重新编译！</p>
+                `
+            },
+            'urdf': {
+                title: 'URDF / Xacro',
+                content: `
+                    <p>URDF是ROS中描述机器人的XML格式。Xacro是URDF的宏语言，减少重复代码。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">Xacro优势</h3>
+                    <ul>
+                        <li>支持宏定义和属性</li>
+                        <li>数学运算</li>
+                        <li>条件语句</li>
+                        <li>包含其他文件</li>
+                    </ul>
+                `
+            },
+            'joint': {
+                title: '关节类型',
+                content: `
+                    <p>URDF中的关节连接两个连杆，定义相对运动。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">主要类型</h3>
+                    <ul>
+                        <li><code>revolute</code> — 旋转关节（有限角度）</li>
+                        <li><code>continuous</code> — 连续旋转（适合轮子）</li>
+                        <li><code>prismatic</code> — 平移关节</li>
+                        <li><code>fixed</code> — 固定关节</li>
+                    </ul>
+                `
+            },
+            'link': {
+                title: 'Link 与 Inertial',
+                content: `
+                    <p>Link是机器人的物理部件，Inertial定义其惯性属性。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">Link结构</h3>
+                    <ul>
+                        <li><code>&lt;visual&gt;</code> — 视觉外观</li>
+                        <li><code>&lt;collision&gt;</code> — 碰撞检测</li>
+                        <li><code>&lt;inertial&gt;</code> — 惯性参数（物理仿真必须）</li>
+                    </ul>
+                `
+            },
+            'diff_drive': {
+                title: '差速驱动原理',
+                content: `
+                    <p>差速驱动（Differential Drive）是轮式机器人最常用的驱动方式。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">工作原理</h3>
+                    <ul>
+                        <li>两个主动轮在机器人两侧</li>
+                        <li>速度相同时：直线运动</li>
+                        <li>速度相反时：原地旋转</li>
+                        <li>速度不同时：圆弧运动</li>
+                    </ul>
+                    <p><strong>四轮差速：</strong>两个主动轮 + 两个万向轮</p>
+                `
+            },
+            'sdf': {
+                title: 'SDF (Simulation Description Format)',
+                content: `
+                    <p>SDF是Gazebo使用的场景描述格式，支持完整仿真场景定义。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">SDF vs URDF</h3>
+                    <ul>
+                        <li><strong>URDF</strong> — 描述机器人本身</li>
+                        <li><strong>SDF</strong> — 描述整个仿真世界</li>
+                    </ul>
+                `
+            },
+            'physics': {
+                title: '物理引擎',
+                content: `
+                    <p>Gazebo使用物理引擎模拟真实的物理世界。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">支持的引擎</h3>
+                    <ul>
+                        <li><code>ODE</code> — Open Dynamics Engine（默认）</li>
+                        <li><code>Bullet</code> — 快速碰撞检测</li>
+                        <li><code>DART</code> — 动态动画与机器人工具包</li>
+                    </ul>
+                `
+            },
+            'gazebo_plugins': {
+                title: 'Gazebo 插件系统',
+                content: `
+                    <p>Gazebo插件扩展仿真功能，允许在仿真中运行自定义代码。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常用插件</h3>
+                    <ul>
+                        <li><code>libgazebo_ros_diff_drive.so</code> — 差速驱动</li>
+                        <li><code>libgazebo_ros_imu.so</code> — IMU传感器</li>
+                        <li><code>libgazebo_ros_laser.so</code> — 激光雷达</li>
+                    </ul>
+                `
+            },
+            'spawn': {
+                title: '模型生成 (Spawning)',
+                content: `
+                    <p>在Gazebo中动态生成机器人模型的过程。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">生成方式</h3>
+                    <ul>
+                        <li><code>/spawn_entity</code> 服务</li>
+                        <li>ros2 launch 启动文件</li>
+                    </ul>
+                `
+            },
+            'diff_drive_plugin': {
+                title: 'DiffDrive 插件',
+                content: `
+                    <p>gazebo_ros_diff_drive插件使机器人能够以差速方式驱动。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">关键参数</h3>
+                    <ul>
+                        <li><code>left_joint</code> — 左轮关节名称</li>
+                        <li><code>right_joint</code> — 右轮关节名称</li>
+                        <li><code>wheel_separation</code> — 轮距</li>
+                        <li><code>wheel_diameter</code> — 轮径</li>
+                    </ul>
+                `
+            },
+            'imu_plugin': {
+                title: 'IMU 插件',
+                content: `
+                    <p>gazebo_ros_imu插件仿真IMU传感器。</p>
+                    <p><strong>输出话题：</strong><code>/imu/data</code></p>
+                `
+            },
+            'contact': {
+                title: '接触参数',
+                content: `
+                    <p>接触参数定义物体碰撞时的物理行为。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">常见参数</h3>
+                    <ul>
+                        <li><code>&lt;kp&gt;</code> — 接触刚度</li>
+                        <li><code>&lt;mu&gt;</code> — 静摩擦系数</li>
+                    </ul>
+                `
+            },
+            'ros2control': {
+                title: 'ros2_control 框架',
+                content: `
+                    <p>ros2_control是ROS2的机器人控制框架，提供硬件抽象、控制器管理和实时控制。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">核心概念</h3>
+                    <ul>
+                        <li><code>Controller Manager</code> — 管理控制器生命周期</li>
+                        <li><code>Hardware Interface</code> — 硬件抽象层</li>
+                        <li><code>Controller</code> — 实现具体控制算法</li>
+                    </ul>
+                `
+            },
+            'controller_manager': {
+                title: '控制器管理器',
+                content: `
+                    <p>Controller Manager是ros2_control的核心组件，负责加载、配置和运行控制器。</p>
+                    <p><strong>常用服务：</strong><code>/controller_manager/list_controllers</code></p>
+                `
+            },
+            'diff_controller': {
+                title: '差速控制器',
+                content: `
+                    <p>diff_drive_controller是用于差速驱动机器人的控制器。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">关键参数</h3>
+                    <ul>
+                        <li><code>left_wheel_names</code> / <code>right_wheel_names</code></li>
+                        <li><code>wheel_separation</code> — 轮距</li>
+                        <li><code>wheel_radius</code> — 轮子半径</li>
+                    </ul>
+                    <p><strong>输入话题：</strong><code>/cmd_vel</code></p>
+                `
+            },
+            'joint_state': {
+                title: '关节状态',
+                content: `
+                    <p>关节状态包含所有关节的位置、速度、力等信息。</p>
+                    <p><code>joint_state_broadcaster</code> 将关节状态发布到 <code>/joint_states</code> 话题。</p>
+                `
+            },
+            'slam': {
+                title: 'SLAM (同步定位与建图)',
+                content: `
+                    <p>SLAM是机器人同时定位和建图的技术。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">流程</h3>
+                    <ul>
+                        <li>传感器采集数据</li>
+                        <li>提取环境特征</li>
+                        <li>匹配当前帧与地图</li>
+                        <li>更新机器人位姿</li>
+                        <li>更新地图</li>
+                    </ul>
+                `
+            },
+            'slam_toolbox': {
+                title: 'SLAM Toolbox',
+                content: `
+                    <p>slam_toolbox是2D激光SLAM的优秀工具，基于Cartographer算法。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">特点</h3>
+                    <ul>
+                        <li>支持在线建图（mapping）和定位（localization）模式</li>
+                        <li>高精度建图</li>
+                        <li>实时性能好</li>
+                    </ul>
+                `
+            },
+            'map_server': {
+                title: 'Map Server',
+                content: `
+                    <p>map_server加载和保存地图。</p>
+                    <p><strong>保存地图：</strong><code>ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map</code></p>
+                    <p><strong>加载地图：</strong>在nav2_params.yaml中配置map.yaml路径</p>
+                `
+            },
+            'nav2': {
+                title: 'Navigation2 框架',
+                content: `
+                    <p>Navigation2是ROS2的导航框架，实现机器人自主导航。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">核心组件</h3>
+                    <ul>
+                        <li><code>Controller Server</code> — 局部路径规划</li>
+                        <li><code>Planner Server</code> — 全局路径规划</li>
+                        <li><code>Costmap 2D</code> — 代价地图</li>
+                        <li><code>BT Navigator</code> — 行为树导航器</li>
+                        <li><code>AMCL</code> — 定位</li>
+                    </ul>
+                `
+            },
+            'amcl': {
+                title: 'AMCL 自适应蒙特卡洛定位',
+                content: `
+                    <p>AMCL使用粒子滤波器估计机器人位姿。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">原理</h3>
+                    <ul>
+                        <li>通过激光数据与地图匹配更新粒子权重</li>
+                        <li>自适应调整粒子数量</li>
+                    </ul>
+                `
+            },
+            'planner': {
+                title: '路径规划器',
+                content: `
+                    <p>路径规划器在代价地图中找到最优路径。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">Nav2规划器</h3>
+                    <ul>
+                        <li><code>Smac Planner</code> — 混合A*（2D）</li>
+                        <li><code>Theta*</code> — 任意角度规划器</li>
+                    </ul>
+                `
+            },
+            'costmap': {
+                title: '代价地图 (Costmap)',
+                content: `
+                    <p>代价地图表示环境中各点的通行代价。</p>
+                    <ul>
+                        <li><code>Global Costmap</code> — 静态地图+动态障碍物</li>
+                        <li><code>Local Costmap</code> — 机器人周围实时更新</li>
+                    </ul>
+                    <p><strong>颜色含义：</strong>黑=自由 / 白=障碍 / 灰=未知</p>
+                `
+            },
+            'behavior_tree': {
+                title: '行为树 (Behavior Tree)',
+                content: `
+                    <p>行为树是Nav2导航策略的实现方式。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">核心节点</h3>
+                    <ul>
+                        <li><code>Sequence</code> — 顺序执行</li>
+                        <li><code>Fallback</code> — 容错执行</li>
+                        <li><code>Condition</code> — 条件判断</li>
+                    </ul>
+                `
+            },
+            'nav2_simple': {
+                title: 'Nav2 Simple Commander',
+                content: `
+                    <p>Nav2 Simple Commander是Nav2的高级Python API，简化导航任务开发。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">主要功能</h3>
+                    <ul>
+                        <li><code>goToPose</code> — 导航到目标点</li>
+                        <li><code>goThroughPoses</code> — 航点导航</li>
+                        <li><code>cancelTask</code> — 取消任务</li>
+                    </ul>
+                    <p><strong>安装：</strong><code>pip3 install nav2-simple-commander</code></p>
+                `
+            },
+            'waypoint': {
+                title: '航点导航',
+                content: `
+                    <p>航点导航是指机器人按预设的一系列点自动导航。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">应用场景</h3>
+                    <ul>
+                        <li>自动巡检</li>
+                        <li>配送机器人</li>
+                        <li>清洁机器人</li>
+                    </ul>
+                `
+            },
+            'action_client': {
+                title: 'Action 客户端',
+                content: `
+                    <p>ROS2 Action用于长时间运行的任务，支持取消、反馈、结果。</p>
+                    <h3 style="margin-top: 15px; color: var(--accent-blue);">Action三要素</h3>
+                    <ul>
+                        <li><code>Goal</code> — 目标</li>
+                        <li><code>Feedback</code> — 实时反馈</li>
+                        <li><code>Result</code> — 最终结果</li>
+                    </ul>
+                    <p><strong>Nav2相关Action：</strong><code>/navigate_to_pose</code></p>
+                `
+            }
+        };
+
+        // 渲染文件树
+        function renderFileTree(nodes, container, depth = 0) {
+            nodes.forEach(node => {
+                const item = document.createElement('div');
+                item.className = 'tree-item';
+                if (depth > 0) item.classList.add('tree-indent');
+
+                const icon = node.type === 'folder' ? '📁' : '📄';
+                item.innerHTML = `<span class="icon">${icon}</span><span class="${node.type}">${node.name}</span>`;
+                item.onclick = () => {
+                    if (node.step) {
+                        document.getElementById(`step-${node.step}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        // 移动端点击后关闭文件树
+                        if (window.innerWidth <= 1024) {
+                            document.getElementById('fileTreeSection').classList.remove('show');
+                        }
+                    } else if (node.children) {
+                        const childContainer = item.nextElementSibling;
+                        if (childContainer?.classList.contains('tree-children')) {
+                            const isHidden = childContainer.style.display === 'none';
+                            childContainer.style.display = isHidden ? 'block' : 'none';
+                        }
+                    }
+                };
+                container.appendChild(item);
+
+                if (node.children) {
+                    const childContainer = document.createElement('div');
+                    childContainer.className = 'tree-children';
+                    if (depth > 0) childContainer.classList.add('tree-indent');
+                    renderFileTree(node.children, childContainer, depth + 1);
+                    container.appendChild(childContainer);
+                }
+            });
+        }
+
+        function showFileInfo(file) {
+            const info = fileInfo[file];
+            if (!info) return;
+            document.getElementById('fileModalTitle').textContent = info.title;
+            document.getElementById('fileModalBody').innerHTML = info.content;
+            document.getElementById('fileModal').classList.add('show');
+        }
+
+        function showKnowledge(key) {
+            const info = knowledgeInfo[key];
+            if (!info) return;
+            document.getElementById('knowledgeModalTitle').textContent = info.title;
+            document.getElementById('knowledgeModalBody').innerHTML = info.content;
+            document.getElementById('knowledgeModal').classList.add('show');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        function toggleMobileTree() {
+            document.getElementById('fileTreeSection').classList.toggle('show');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                closeModal('fileModal');
+                closeModal('knowledgeModal');
+            }
+        });
+
+        // 初始化
+        const treeContainer = document.getElementById('fileTree');
+        renderFileTree(projectTree, treeContainer);
+    </script>
+</body>
+</html>

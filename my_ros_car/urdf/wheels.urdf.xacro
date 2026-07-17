@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ===================================================== -->
+  <!--                四驱轮子宏                             -->
+  <!-- ===================================================== -->
+
+  <xacro:macro name="wheel"
+               params="prefix x y axis_xyz">
+
+    <!-- ================= Link ================= -->
+    <link name="${prefix}_wheel_link">
+
+      <!-- Visual -->
+      <visual>
+        <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder
+              radius="${wheel_radius}"
+              length="${wheel_width}"/>
+        </geometry>
+        <material name="Black">
+          <color rgba="0.15 0.15 0.15 1.0"/>
+        </material>
+      </visual>
+
+      <!-- Collision -->
+      <collision>
+        <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder
+              radius="${wheel_radius}"
+              length="${wheel_width}"/>
+        </geometry>
+      </collision>
+
+      <!-- Inertial -->
+      <inertial>
+        <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+        <mass value="${wheel_mass}"/>
+        <!-- 实心圆柱，inertia会随rpy自动计算 -->
+        <inertia
+            ixx="${wheel_mass*(3*wheel_radius*wheel_radius+wheel_width*wheel_width)/12.0}"
+            ixy="0"
+            ixz="0"
+            iyy="${0.5*wheel_mass*wheel_radius*wheel_radius}"
+            iyz="0"
+            izz="${wheel_mass*(3*wheel_radius*wheel_radius+wheel_width*wheel_width)/12.0}"/>
+      </inertial>
+
+    </link>
+
+    <!-- ================= Joint ================= -->
+    <joint
+        name="${prefix}_wheel_joint"
+        type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="${x} ${y} -0.03" rpy="0 0 0"/>
+      <!-- ROS REP-103: X前 Y左 Z上，轮轴沿Y；右轮在Y负侧，axis需反向 -->
+      <axis xyz="${axis_xyz}"/>
+      <dynamics
+          damping="0.1"
+          friction="0.0"/>
+    </joint>
+
+  </xacro:macro>
+
+  <!-- ===================================================== -->
+  <!--                 四个轮子的封装                        -->
+  <!-- ===================================================== -->
+
+  <xacro:macro name="wheels">
+    <!-- 左前：axis +Y -->
+    <xacro:wheel
+        prefix="left_front"
+        x="0.14"
+        y="0.17"
+        axis_xyz="0 1 0"/>
+
+    <!-- 左后：axis +Y -->
+    <xacro:wheel
+        prefix="left_rear"
+        x="-0.14"
+        y="0.17"
+        axis_xyz="0 1 0"/>
+
+    <!-- 右前：axis +Y（diff_drive_controller 统一用正向速度，axis 需一致） -->
+    <xacro:wheel
+        prefix="right_front"
+        x="0.14"
+        y="-0.17"
+        axis_xyz="0 1 0"/>
+
+    <!-- 右后：axis +Y -->
+    <xacro:wheel
+        prefix="right_rear"
+        x="-0.14"
+        y="-0.17"
+        axis_xyz="0 1 0"/>
+  </xacro:macro>
+
+</robot>

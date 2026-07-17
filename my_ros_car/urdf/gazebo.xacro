@@ -1,0 +1,136 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ===================================================== -->
+  <!--                 Gazebo 配置                           -->
+  <!-- ===================================================== -->
+
+  <xacro:macro name="gazebo_config">
+
+    <!-- ===================================================== -->
+    <!--                   Base Link                           -->
+    <!-- ===================================================== -->
+
+    <gazebo reference="base_link">
+      <material>Gazebo/Blue</material>
+      <gravity>true</gravity>
+      <self_collide>false</self_collide>
+    </gazebo>
+
+    <!-- ===================================================== -->
+    <!--                  Wheel Macro                          -->
+    <!-- ===================================================== -->
+
+    <xacro:macro name="wheel_gazebo"
+                 params="wheel">
+      <gazebo reference="${wheel}">
+        <material>Gazebo/Black</material>
+        <mu1>1.0</mu1>
+        <mu2>1.0</mu2>
+        <kp>50000.0</kp>
+        <kd>100.0</kd>
+        <fdir1>1 0 0</fdir1>
+        <self_collide>false</self_collide>
+      </gazebo>
+    </xacro:macro>
+
+    <!-- ===================================================== -->
+    <!--                 四个轮子                              -->
+    <!-- ===================================================== -->
+
+    <xacro:wheel_gazebo wheel="left_front_wheel_link"/>
+    <xacro:wheel_gazebo wheel="left_rear_wheel_link"/>
+    <xacro:wheel_gazebo wheel="right_front_wheel_link"/>
+    <xacro:wheel_gazebo wheel="right_rear_wheel_link"/>
+
+    <!-- ===================================================== -->
+    <!--                     LiDAR                             -->
+    <!-- ===================================================== -->
+
+    <gazebo reference="laser_link">
+      <material>Gazebo/Gray</material>
+      <!-- LiDAR Sensor Plugin -->
+      <sensor name="lidar_sensor" type="gpu_lidar">
+        <pose>0 0 0 0 0 0</pose>
+        <visualize>true</visualize>
+        <update_rate>10</update_rate>
+        <frame>laser_link</frame>
+        <topic>scan</topic>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>360</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.1</min>
+            <max>10.0</max>
+            <resolution>0.01</resolution>
+          </range>
+        </lidar>
+      </sensor>
+    </gazebo>
+
+    <!-- ===================================================== -->
+    <!--                      IMU                              -->
+    <!-- ===================================================== -->
+
+    <gazebo reference="imu_link">
+      <material>Gazebo/Blue</material>
+      <!-- IMU Sensor Plugin -->
+      <sensor name="imu_sensor" type="imu">
+        <pose>0 0 0 0 0 0</pose>
+        <visualize>false</visualize>
+        <update_rate>100</update_rate>
+        <frame>imu_link</frame>
+        <topic>imu/data</topic>
+      </sensor>
+    </gazebo>
+
+    <!-- ===================================================== -->
+    <!--                    Camera                             -->
+    <!-- ===================================================== -->
+
+    <gazebo reference="camera_link">
+      <material>Gazebo/Black</material>
+      <!-- Camera Sensor Plugin -->
+      <sensor name="camera_sensor" type="camera">
+        <pose>0 0 0 0 0 0</pose>
+        <visualize>false</visualize>
+        <update_rate>30</update_rate>
+        <frame>camera_link</frame>
+        <!-- image 话题 -->
+        <topic>camera/image_raw</topic>
+        <!-- camera_info 单独子块 -->
+        <camera_info>
+          <topic>camera/camera_info</topic>
+        </camera_info>
+        <camera>
+          <horizontal_fov>1.0471975512</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>100.0</far>
+          </clip>
+          <distortion>
+            <k1>0.0</k1>
+            <k2>0.0</k2>
+            <k3>0.0</k3>
+            <p1>0.0</p1>
+            <p2>0.0</p2>
+          </distortion>
+        </camera>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>
