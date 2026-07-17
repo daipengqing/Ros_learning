@@ -1,246 +1,219 @@
-# 🚀 四轮差速机器人开发指南
+# 🤖 my_ros_car — 四轮差速机器人 ROS 2 + Gazebo + Nav2 仿真包
 
-基于 **ROS2 Lyrical (真机)** + **Gazebo 10.4.0** 的四轮差速机器人仿真项目
+基于 **ROS 2 Lyrical** + **Gazebo Harmonic 10.x** 的四轮差速驱动机器人仿真项目，实现从 **键盘遥控 → SLAM 建图 → Nav2 自主导航 → 自动巡检** 的完整链路。
 
-## 📋 项目架构
+## 🏗️ 混合架构
 
-**混合架构设计**：
-- **真机 (ROS2 Lyrical)**：运行 Gazebo 仿真
-- **Docker容器 (ROS2 Humble)**：运行 SLAM 和 Navigation2 算法
+```
+宿主机 (Ubuntu, ROS 2 Lyrical)           Docker 容器 (ROS 2 Humble)
+┌──────────────────────────┐            ┌──────────────────────────────┐
+│ Gazebo Harmonic 仿真      │            │ slam_toolbox (SLAM 建图)      │
+│  • 物理引擎 / 传感器       │   DDS      │ nav2 (AMCL + 规划 + 控制)    │
+│  • ros2_control 控制器     │◄─────────►│ patrol_node (自主巡检)       │
+│  • /scan /clock /odom /tf │  通信      │ RViz2 (可视化)               │
+└──────────────────────────┘            └──────────────────────────────┘
+         │                                        │
+         └─── 数据卷映射: src/my_ros_car/ ─────────┘
+```
 
-这样设计的原因：
-1. 真机性能更好，Gazebo仿真更流畅
-2. Docker中Humble版本包更完整
-3. 两个环境隔离，互不干扰
+**为什么这样设计**: Lyrical (2026.05) 是最新版 ROS 2，slam_toolbox 和 nav2 尚未发布适配版本；Docker 容器运行 Humble 提供完整的导航算法栈。两边通过 DDS 跨环境通信。
 
-## 🗂️ 项目结构
+## 📁 项目结构
 
 ```
 my_ros_car/
-├── CMakeLists.txt          # CMake构建配置
-├── package.xml             # ROS2包描述文件
-├── README.md               # 本文件
-├── urdf/                   # URDF机器人模型
-│   ├── robot_base.urdf.xacro   # 底盘定义
-│   ├── wheels.urdf.xacro       # 轮子详细配置
-│   ├── sensors.urdf.xacro      # 传感器定义
-│   └── robot.urdf.xacro        # 完整机器人（包含所有子文件）
-├── launch/                 # ROS2启动文件
-│   ├── gazebo.launch.py        # 启动Gazebo仿真
-│   └── robot.launch.py         # 完整机器人系统启动
-├── config/                  # 配置文件
-│   └── controllers.yaml        # ros2_control控制器配置
-├── worlds/                  # Gazebo世界文件
-│   └── simple_office.world     # 简单办公室环境
-├── maps/                    # 地图目录（空）
-└── src/                     # Python源代码（空）
+├── README.md                           # 本文件
+├── CMakeLists.txt                      # CMake 构建配置
+├── package.xml                         # ROS 2 包描述
+├── CODE_GUIDE.md                       # 新手代码阅读手册（含调试记录）
+├── differential_robot_workflow.html    # 开发全景图（可浏览器打开）
+│
+├── urdf/                               # 机器人 Xacro 模型
+│   ├── robot.urdf.xacro                # 总装（全局参数 + include 所有模块）
+│   ├── robot_base.urdf.xacro           # 底盘 link + base_footprint
+│   ├── wheels.urdf.xacro               # 4 个驱动轮 link + joint
+│   ├── sensors.urdf.xacro              # LiDAR / IMU / Camera link
+│   ├── gazebo.xacro                    # Gazebo 物理/传感器插件
+│   └── gazebo_control.xacro            # ros2_control 硬件接口
+│
+├── launch/                             # 启动文件
+│   ├── gazebo.launch.py                # 【宿主机】启动 Gazebo + 机器人 + ros_gz_bridge
+│   ├── robot.launch.py                 # 【宿主机】机器人 spawn + 控制器加载（嵌套）
+│   ├── slam.launch.py                  # 【Docker】SLAM Toolbox + RViz2
+│   ├── navigation.launch.py            # 【Docker】Nav2 完整导航栈 + RViz2
+│   ├── patrol.launch.py                # 【Docker】导航 + 自主巡检
+│   └── teleop.launch.py                # 已废弃（参考用）
+│
+├── config/                             # 配置文件
+│   ├── controllers.yaml                # diff_drive + joint_state_broadcaster
+│   ├── slam_toolbox.yaml               # 在线异步 SLAM 参数
+│   ├── nav2_params.yaml                # Nav2 完整参数（~500行）
+│   └── patrol_points.yaml              # 巡检航点列表
+│
+├── scripts/                            # Python 脚本
+│   ├── twist_relay.py                  # Twist → TwistStamped 消息中继
+│   ├── cmd_vel_test.py                 # 测试脚本（让小车持续前进）
+│   ├── patrol_node.py                  # 自主巡检节点（Nav2 Simple Commander）
+│   └── nav2_odom_relay.py              # 里程计话题中继（备用）
+│
+├── rviz/                               # RViz2 配置文件
+│   ├── slam.rviz                       # SLAM 可视化配置
+│   └── navigation.rviz                 # 导航可视化配置
+│
+├── worlds/                             # Gazebo 世界文件
+│   ├── simple_office.world             # 简单办公室（4 面墙 + 障碍物）
+│   └── myHome.world                    # 住宅环境
+│
+└── maps/                               # 保存的地图文件
+    └── my_map.yaml / my_map.pgm        # （建图后生成）
 ```
 
-## ✅ 步骤1：项目环境准备（已完成）
-
-- [x] ROS2工作空间已存在：`~/dddmr_navigation/`
-- [x] 创建功能包：`my_ros_car`
-- [x] 配置package.xml依赖
-- [x] 配置CMakeLists.txt
-- [x] 创建目录结构（urdf, launch, config, worlds）
-
-## 🔧 步骤2：Xacro机器人建模（进行中）
-
-### 已创建的文件：
-
-- [x] `urdf/robot_base.urdf.xacro` - 底盘基础模型
-  - 底盘主体（box: 0.4m × 0.3m × 0.1m）
-  - 四个连续旋转轮子
-  - 轮距：0.34m
-  - 轮半径：0.05m
-  - 质量参数和惯性矩阵
-
-- [x] `urdf/wheels.urdf.xacro` - 轮子装饰
-  - 轮毂装饰（银色圆柱）
-  - 四个轮子各一个
-
-- [x] `urdf/sensors.urdf.xacro` - 传感器模型
-  - 激光雷达（laser_link）
-  - IMU惯性测量单元（imu_link）
-  - 摄像头（camera_link，可选）
-
-- [x] `urdf/robot.urdf.xacro` - 完整机器人
-  - 包含所有子文件
-  - Gazebo插件配置（差速驱动、IMU、激光雷达）
-  - ros2_control配置
-  - 材质定义
-
-### 机器人参数总结：
+## 🤖 机器人参数
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
-| 底盘长度 | 0.4m | X方向 |
-| 底盘宽度 | 0.3m | Y方向 |
-| 底盘高度 | 0.1m | Z方向 |
-| 底盘质量 | 5.0kg | - |
-| 轮半径 | 0.05m | 10cm直径 |
-| 轮宽度 | 0.025m | - |
-| 轮距 | 0.34m | 左右轮中心距 |
-| 轮质量 | 1.0kg | 每个轮子 |
-
-## 🗺️ 步骤3：Gazebo世界文件
-
-- [x] `worlds/simple_office.world` - 简单办公室环境
-  - 地面平面
-  - 四面墙壁（8m × 8m房间）
-  - 光照配置
-  - 物理引擎配置（ODE）
-  - 两个障碍物盒子
-
-## ⚙️ 步骤4：机器人物理与插件配置
-
-已在 `robot.urdf.xacro` 中完成：
-- [x] Gazebo差速驱动插件
-  - 左轮：left_front/left_rear_wheel_joint
-  - 右轮：right_front/right_rear_wheel_joint
-  - 发布odom话题和tf变换
-- [x] IMU插件配置
-- [x] 激光雷达插件配置（720个采样点，-π到π）
-
-## 🎮 步骤5：ros2_control控制器配置
-
-- [x] `config/controllers.yaml` - 控制器参数配置
-  - 差速控制器（diff_cont）
-    - 左右轮关节名称
-    - 轮距：0.34m
-    - 轮半径：0.05m
-    - odom坐标系：odom → base_footprint
-  - 关节状态广播器（joint_broad）
-
-- [x] `launch/gazebo.launch.py` - Gazebo启动文件
-  - 启动Gazebo服务器和GUI
-  - 加载机器人URDF
-  - 生成机器人实体
-  - 自动加载控制器
-
-- [x] `launch/robot.launch.py` - 完整机器人启动文件
-  - 一键启动完整系统
-  - 支持暂停启动
-  - 环境变量配置
-
-## 🗺️ 步骤6-8：SLAM与导航（待实现）
-
-将在Docker容器（ROS2 Humble）中实现：
-- [ ] SLAM建图（slam_toolbox）
-- [ ] Navigation2导航栈
-- [ ] 自主巡检系统
+| 底盘尺寸 | 0.40 × 0.32 × 0.10 m | L × W × H |
+| 底盘质量 | 8.0 kg | |
+| 轮子半径 | 0.05 m | |
+| 轮宽 | 0.03 m | |
+| 单轮质量 | 0.40 kg | |
+| 左右轮距 | 0.34 m | |
+| 前后轴距 | 0.28 m | |
+| 驱动方式 | 四轮差速 (4WD) | 同侧两轮同速 |
+| 传感器 | 360° LiDAR (10Hz) / IMU (100Hz) / RGB Camera (30fps) | |
 
 ## 🚀 快速开始
 
-### 1. 编译包
+### 前置条件
+
+- 宿主机: ROS 2 Lyrical + Gazebo Harmonic 10.x + `ros_gz_sim` + `ros_gz_bridge`
+- Docker: 容器 `dddmr_x64_navigation`（ROS 2 Humble，已安装 slam_toolbox + nav2 完整栈）
+- 宿主机源码目录已通过 `-v` 挂载到容器，两边实时同步
+
+### 构建
 
 ```bash
-# 在真机上（ROS2 Lyrical）
-source /opt/ros/lyrical/setup.bash
+# === 宿主机 ===
 cd ~/dddmr_navigation
-colcon build --packages-select my_ros_car
-source install/setup.bash
+source /opt/ros/lyrical/setup.bash
+colcon build --packages-select my_ros_car --symlink-install --install-base install_host
+source install_host/setup.bash
+
+# === Docker 容器 ===
+docker exec -it dddmr_x64_navigation bash
+cd ~/dddmr_navigation
+source /opt/ros/humble/setup.bash
+rm -rf build/my_ros_car                           # 清理宿主机残留
+colcon build --packages-select my_ros_car --symlink-install --install-base install_docker
+source install_docker/setup.bash
 ```
 
-### 2. 启动Gazebo仿真
+> **注意**: 宿主机用 `install_host/`，Docker 用 `install_docker/`，互不污染。
+
+### 阶段 1: 启动仿真 + 键盘控制
 
 ```bash
-# 方式1：启动Gazebo（包含机器人）
+# === 宿主机 终端1: 启动 Gazebo ===
+cd ~/dddmr_navigation
+source install_host/setup.bash
 ros2 launch my_ros_car gazebo.launch.py
 
-# 方式2：启动完整机器人系统
-ros2 launch my_ros_car robot.launch.py
+# === 宿主机 终端2: 消息中继（Twist → TwistStamped）===
+python3 ~/dddmr_navigation/src/my_ros_car/scripts/twist_relay.py
 
-# 无GUI模式（服务器模式）
-ros2 launch my_ros_car gazebo.launch.py gui:=false
+# === 宿主机 终端3: 键盘控制 ===
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+# 按键: i 前进, , 后退, j 左转, l 右转, k 停车
 ```
 
-### 3. 手动控制机器人
+### 阶段 2: SLAM 建图
 
 ```bash
-# 新终端，发送速度命令
-ros2 topic pub /diff_cont/cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.2}, angular: {z: 0.5}}" -1
+# === 宿主机: 仿真 + 键盘控制保持运行 ===
+
+# === Docker 容器: 启动建图 ===
+docker exec -it dddmr_x64_navigation bash
+cd ~/dddmr_navigation
+source install_docker/setup.bash
+ros2 launch my_ros_car slam.launch.py
+# RViz2 自动启动，显示实时地图
+
+# 键盘控制机器人走遍环境后，保存地图（Docker 内）
+ros2 run nav2_map_server map_saver_cli -f ~/dddmr_navigation/src/my_ros_car/maps/my_map
 ```
 
-### 4. 查看话题
+### 阶段 3: Nav2 自主导航
 
 ```bash
-# 查看odom里程计
-ros2 topic echo /diff_cont/odom
+# === 宿主机: 重启仿真（Ctrl+C 后）===
+ros2 launch my_ros_car gazebo.launch.py
 
-# 查看激光雷达数据
-ros2 topic echo /scan
-
-# 查看IMU数据
-ros2 topic echo /imu/data
-
-# 查看关节状态
-ros2 topic echo /joint_states
+# === Docker: 启动导航 ===
+ros2 launch my_ros_car navigation.launch.py map:=/path/to/my_map.yaml
+# 在 RViz 中用 "2D Goal Pose" 工具点击目标位置
 ```
 
-### 5. 查看TF树
+### 阶段 4: 自动巡检
 
 ```bash
-# 安装tf2工具（如果还没有）
-sudo apt install ros-${ROS_DISTRO}-tf2-tools
+# === 宿主机: 仿真保持运行 ===
 
-# 查看TF树
-ros2 run tf2_tools view_frames
+# === Docker: 一键启动巡检 ===
+ros2 launch my_ros_car patrol.launch.py
+# 机器人自动按 patrol_points.yaml 中定义的航点循环巡逻
 ```
 
-## 📝 后续工作
+## 🔧 常用诊断命令
 
-### Docker容器中的SLAM和导航（步骤6-8）
-
-在Docker容器（ROS2 Humble）中：
-
-1. **复制包到容器**
-   ```bash
-   docker cp ~/dddmr_navigation/src/my_ros_car dddmr_x64_gazebo:/ws_gz/src/
-   ```
-
-2. **在容器中编译**
-   ```bash
-   docker exec -it dddmr_x64_gazebo bash
-   source /opt/ros/humble/setup.bash
-   cd /ws_gz
-   colcon build --packages-select my_ros_car
-   source install/setup.bash
-   ```
-
-3. **配置DDS通信**（让真机和Docker能通信）
-
-4. **实现步骤6-8**
-   - SLAM建图
-   - Navigation2配置
-   - 自主巡检
-
-## 🐛 调试技巧
-
-### 检查控制器状态
 ```bash
+# 查看所有话题
+ros2 topic list
+
+# 确认控制器状态（必须是 active）
 ros2 control list_controllers
-ros2 control list_hardware_components
+
+# 查看里程计
+ros2 topic echo /diff_drive_controller/odom --once
+
+# 确认激光雷达有数据
+ros2 topic echo /scan --once
+
+# 查看 TF 树
+ros2 run tf2_tools view_frames
+
+# 保存地图
+ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map
+
+# 跨环境通信诊断（Docker 内）
+ros2 topic list          # 应能看到宿主机的 /scan /clock /tf 等
+ros2 topic hz /scan      # 确认数据频率正常 (~10Hz)
 ```
 
-### 查看Gazebo状态
-```bash
-gz stats  # 查看仿真统计信息
-gz topic -l  # 查看Gazebo话题
-```
+## 🐛 调试记录
 
-### 重置仿真
-```bash
-gz reset  # 重置到初始状态
-```
+完整调试记录见 [CODE_GUIDE.md](CODE_GUIDE.md) 第 4 章。踩过的 8 个关键坑：
 
-## 📚 参考资料
+| # | 问题 | 根因 | 解决 |
+|---|------|------|------|
+| 1 | bridge 崩溃 | `@` 分隔符位置错误 | `/clock@ROS[gz` 格式 |
+| 2 | 控制器找不到 type | `type` 在 `ros__parameters` 外部 | 移入 `ros__parameters` 内 |
+| 3 | 不支持的参数 | Lyrical API 变更 | 删除 `use_stamped_vel` 等 |
+| 4 | 仿真无响应 | 插件文件名不含 `lib` 前缀 | `gz_ros2_control-system` |
+| 5 | 控制器不工作 | 缺 `controller_manager` 段 | 添加 `update_rate` 参数 |
+| 6 | spawner 缺参数 | 没传 `--param-file` | 添加 `-p controllers.yaml` |
+| 7 | 启动顺序竞态 | TimerAction 并发 | 改用 OnProcessExit 事件驱动 |
+| 8 | 轮转车不动 | 底盘擦地 + 轴反向 | 修改 joint z 偏移和 axis |
+| 9 | `/scan` 缺失 | 传感器需 bridge 桥接 | ros_gz_bridge 添加 LaserScan |
+| 10 | Docker/宿主机 install 冲突 | 共享 build 目录 | 独立 `install_host/` `install_docker/` |
 
-- [HTML指南](differential_robot_workflow.html) - 四轮差速机器人开发全景图
-- [ROS2 Control文档](https://control.ros.org/)
-- [Gazebo文档](https://gazebosim.org/docs)
-- [Diff Drive Controller](https://github.com/ros-controls/ros2_controllers/blob/master/diff_drive_controller/README.md)
+## 📚 参考
+
+- [CODE_GUIDE.md](CODE_GUIDE.md) — 新手代码阅读手册
+- [differential_robot_workflow.html](differential_robot_workflow.html) — 开发全景图（浏览器打开）
+- [ROS 2 Control 文档](https://control.ros.org/)
+- [Gazebo Harmonic 文档](https://gazebosim.org/docs)
+- [Navigation2 文档](https://docs.nav2.org/)
+- [slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)
 
 ## 📄 许可证
 
@@ -248,4 +221,4 @@ MIT License
 
 ## 👤 维护者
 
-Langzi0805 (1227059712@qq.com)
+Langzi0805 — [GitHub: daipengqing](https://github.com/daipengqing)
